@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -23,10 +24,42 @@ android {
         versionName = "0.1.0"
     }
 
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties().apply {
+        if (keystorePropsFile.exists()) {
+            keystorePropsFile.inputStream().use { load(it) }
+        }
+    }
+
+    signingConfigs {
+        val storeFilePath = System.getenv("RELEASE_STORE_FILE")
+            ?: keystoreProps.getProperty("storeFile")
+        val storePasswordVal = System.getenv("RELEASE_STORE_PASSWORD")
+            ?: keystoreProps.getProperty("storePassword")
+        val keyAliasVal = System.getenv("RELEASE_KEY_ALIAS")
+            ?: keystoreProps.getProperty("keyAlias")
+        val keyPasswordVal = System.getenv("RELEASE_KEY_PASSWORD")
+            ?: keystoreProps.getProperty("keyPassword")
+
+        if (storeFilePath != null && storePasswordVal != null && keyAliasVal != null && keyPasswordVal != null) {
+            val storeFileObj = file(storeFilePath)
+            if (storeFileObj.exists()) {
+                create("release") {
+                    storeFile = storeFileObj
+                    storePassword = storePasswordVal
+                    keyAlias = keyAliasVal
+                    keyPassword = keyPasswordVal
+                    enableV1Signing = true
+                    enableV2Signing = true
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
