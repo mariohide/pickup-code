@@ -1,0 +1,107 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "99db1cecc248118553c5f5161d09cf71",
+    "entities": [
+      {
+        "tableName": "parcel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carrier` TEXT, `arrived_at` INTEGER NOT NULL, `location` TEXT, `phone_tail` TEXT, `pickup_method` TEXT NOT NULL, `pickup_code` TEXT, `locker_number` TEXT, `compartment` TEXT, `pickup_instruction` TEXT, `picked_at` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carrier",
+            "columnName": "carrier",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "arrivedAt",
+            "columnName": "arrived_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "phoneTail",
+            "columnName": "phone_tail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pickupMethod",
+            "columnName": "pickup_method",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pickupCode",
+            "columnName": "pickup_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lockerNumber",
+            "columnName": "locker_number",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "compartment",
+            "columnName": "compartment",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pickupInstruction",
+            "columnName": "pickup_instruction",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pickedAt",
+            "columnName": "picked_at",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "scan_cursor",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`source` TEXT NOT NULL, `last_received_at` INTEGER NOT NULL, PRIMARY KEY(`source`))",
+        "fields": [
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastReceivedAt",
+            "columnName": "last_received_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "source"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '99db1cecc248118553c5f5161d09cf71')"
+    ]
+  }
+}

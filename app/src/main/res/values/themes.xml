@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 只管 Compose 接管前的窗口底色；界面配色由 PickupTheme 决定 -->
+    <style name="Theme.PickupCode" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

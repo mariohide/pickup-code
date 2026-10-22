@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动图标前景：立体纸箱（Figma「图标」页 · 启动图标前景/E），108dp 画布，图形落在 66dp 安全区内 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 顶面 -->
+    <path
+        android:fillColor="#E6BA82"
+        android:pathData="M54,31.5L76.5,42.75L54,54L31.5,42.75L54,31.5Z" />
+    <!-- 左面 -->
+    <path
+        android:fillColor="#C8904F"
+        android:pathData="M31.5,42.75L54,54V79L31.5,67.75V42.75Z" />
+    <!-- 右面 -->
+    <path
+        android:fillColor="#A66D34"
+        android:pathData="M54,54L76.5,42.75V67.75L54,79V54Z" />
+    <!-- 封箱胶带：顶面接缝，延伸到右面 -->
+    <path
+        android:fillColor="#EDCF98"
+        android:pathData="M45.675,35.6625L68.175,46.9125L62.325,49.8375L39.825,38.5875L45.675,35.6625Z" />
+    <path
+        android:fillColor="#D2A469"
+        android:pathData="M68.175,46.9125L62.325,49.8375V58.5875L68.175,55.6625V46.9125Z" />
+</vector>

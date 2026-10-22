@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知小图标：立体纸箱单色剪影（Figma「图标」页 · 单色图标/E），与主题图标单色层同一图形 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.5,12.309V21.75L3,17.5V8.059L11.5,12.309ZM21,17.5L12.5,21.75V12.308L21,8.059V17.5ZM15.381,9.749L12,11.44L3.559,7.22L6.939,5.528L15.381,9.749ZM20.44,7.22L16.499,9.19L8.059,4.97L12,3L20.44,7.22Z" />
+</vector>

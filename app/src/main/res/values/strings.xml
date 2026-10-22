@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">取件码</string>
+
+    <string name="pickup_list_title">取件清单</string>
+    <string name="pending_suffix">件待取</string>
+    <string name="piece_count">（%1$d 件）</string>
+    <string name="unknown_location">未识别地点</string>
+    <string name="reveal_all_codes">查看全部取件码</string>
+    <string name="reveal_all_confirm_title">查看全部取件码？</string>
+    <string name="reveal_all_confirm_body">本组 %1$d 件待取包裹将显示取件码，并全部记为已取。之后可以逐件撤销。</string>
+    <string name="reveal">查看</string>
+    <string name="no_pending_parcels">没有待取的包裹</string>
+    <string name="picked_section_title">已取</string>
+
+    <string name="phone_tail">尾号 %1$s</string>
+    <string name="arrived_on">%1$d月%2$d日到件</string>
+    <string name="locker_number">%1$s号柜</string>
+    <string name="compartment">%1$s格口</string>
+
+    <string name="reveal_code">查看取件码</string>
+    <string name="mark_picked_up">标记已取</string>
+    <string name="undo_picked_up">撤销已取</string>
+    <string name="restore_pending">改回待取</string>
+
+    <string name="mark_picked_up_failed">未能标记已取</string>
+    <string name="undo_failed">撤销失败</string>
+    <string name="loading">正在加载</string>
+    <string name="load_failed">加载失败</string>
+    <string name="retry">重试</string>
+    <string name="scan_sms_failed">扫描短信失败</string>
+    <string name="sms_permission_off">短信读取权限已关闭，新包裹可能漏记</string>
+    <string name="notification_access_off">通知使用权已关闭，取件短信会重复提醒</string>
+    <string name="enable_permission">去开启</string>
+
+    <string name="new_parcel_channel">新包裹</string>
+    <string name="notification_listener_label">撤掉取件短信的重复提醒</string>
+
+    <string name="settings">设置</string>
+    <string name="navigate_back">返回</string>
+    <string name="danger_zone">危险操作</string>
+    <string name="clear_picked">清空已取数据</string>
+    <string name="clear_picked_description">删除所有已取包裹的记录，待取包裹不受影响</string>
+    <string name="no_picked_data">没有已取数据</string>
+    <string name="clear_picked_confirm_title">清空已取数据？</string>
+    <string name="clear_picked_confirm_body_count">将删除 %1$d 件已取包裹的记录，无法恢复。待取包裹不受影响。</string>
+    <string name="clear_picked_confirm_body">将删除所有已取包裹的记录，无法恢复。待取包裹不受影响。</string>
+    <string name="clear">清空</string>
+    <string name="cancel">取消</string>
+    <string name="picked_cleared">已清空 %1$d 件已取记录</string>
+    <string name="clear_picked_failed">清空失败</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动图标背景层：米色，衬托牛皮纸色的纸箱 -->
+    <color name="ic_launcher_background">#FFF1DC</color>
+</resources>
