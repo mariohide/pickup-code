@@ -15,7 +15,7 @@ import java.time.Clock
 import javax.inject.Inject
 
 /**
- * 新短信一到就解析，是取件短信就入库并发取件码通知（spec message_source.md §1、§6）。
+ * 新短信一到就解析，是取件短信就入库并发新包裹通知（spec message_source.md §1、§6）。
  * 应用没在运行时，系统也会拉起进程送达。
  */
 @AndroidEntryPoint

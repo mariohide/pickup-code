@@ -101,7 +101,7 @@ fun PickupListRoute(
     LifecycleStartEffect(viewModel) {
         smsPermissionGranted = context.hasSmsPermission()
         notificationAccessGranted = context.hasNotificationAccess()
-        // 取件码通知里的包裹清单上都有（spec message_source §6）
+        // 新包裹通知里的包裹清单上都有（spec message_source §6）
         NotificationManagerCompat.from(context).cancelAll()
         if (smsPermissionGranted) viewModel.scan()
         val missing = context.missingRuntimePermissions()

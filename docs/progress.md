@@ -22,14 +22,14 @@
 - 不再内置示例数据（2026-10-22 去掉）：清单里只有从短信解析出的包裹。
 - 短信扫描：`SmsInbox`（ContentResolver 读收件箱）→ `PickupSmsParser`（纯规则解析）→ `ParcelDeduplicator` → `SmsScanRepository` 在一个事务里入库并推进 `scan_cursor`。数据库 v2，用 AutoMigration 从 v1 升级。
 - 短信权限放在界面层：`PickupListRoute` 在 `LifecycleStartEffect` 里检查权限，并请求权限或静默扫描；横幅状态不进 UiState。
-- 新短信：`notification/SmsReceivedReceiver`（`SMS_RECEIVED` 广播）→ `MessageScanRepository.importReceivedSms` 解析去重入库 → `PickupNotifier` 发取件码通知，再顺带 `scanSms()` 推进扫描位置。`notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的通知。
+- 新短信：`notification/SmsReceivedReceiver`（`SMS_RECEIVED` 广播）→ `MessageScanRepository.importReceivedSms` 解析去重入库 → `PickupNotifier` 发新包裹通知，再顺带 `scanSms()` 推进扫描位置。`notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的通知。
 
 ## 已实现
 
 | 规格 | 范围 | 备注 |
 |---|---|---|
 | `specs/pickup_list.md` | 全部（通知来源除外） | 进入页面或回到前台时静默扫描；下拉刷新时扫描并重新归类，刷新态至少 700 毫秒；扫描失败有提示条；短信权限有横幅 |
-| `specs/message_source.md` | 短信来源、解析、去重、权限、取件码通知 | 2026-10-22 新写，数值已确认，用着有问题再调；§6 的接收器与通知监听没有单测，需真机验证 |
+| `specs/message_source.md` | 短信来源、解析、去重、权限、新包裹通知 | 2026-10-22 新写，数值已确认，用着有问题再调；§6 的接收器与通知监听没有单测，需真机验证 |
 | `specs/settings.md` | 全部 | 清单顶栏齿轮 → 设置页，「危险操作 · 清空已取数据」 |
 
 单测 51 条全部通过：清单 builder 6 条、清单 ViewModel 13 条、设置 ViewModel 5 条、短信解析 19 条、真实短信语料 2 条（21 个样例，取自 PickupCodeGrabber，MIT 许可）、去重 6 条。共享的假仓库在 `app/src/test/.../data/`（`FakeParcelRepository`、`FakeMessageScanRepository`）。`SmsScanRepository` 依赖 Room 和 ContentResolver，没有单测，需要在真机上验证。
@@ -61,7 +61,7 @@
 - [x] 清单卡片容器统一为 `surfaceContainerLow`（符合页面 `surface`、卡片 `surfaceContainerLow` 配色约定）；已取区通过整体透明度弱化（alpha = 0.72f）降低对比度（2026-10-22 定）。
 - [ ] 分组排序在主线程；数据量到上千件时再加 `flowOn(Dispatchers.Default)`。
 - 短信解析：真机核对暂无问题；以后遇到识别错的短信，再把样例补进 `PickupSmsParserTest`。
-- [ ] 真机验证取件码通知（message_source §6）：来一条真实取件短信，确认只剩本应用一条通知、短信应用的提示音被停掉；三星信息若另发群组摘要通知，看是否残留。
+- [ ] 真机验证新包裹通知（message_source §6）：来一条真实取件短信，确认只剩本应用一条通知、短信应用的提示音被停掉；三星信息若另发群组摘要通知，看是否残留。
 - [ ] 催取短信现在不再提醒（被撤掉、去重后也不发通知），用一段时间后看是否需要对仍待取的包裹再提醒一次。
 - [ ] 通知来源（淘宝、拼多多等 App 推送）：通知使用权和 `SmsNotificationListener` 已有，届时在其中加对这些 App 的解析。
 - [ ] READ_SMS、RECEIVE_SMS 和通知使用权都是受限设置：用 adb/Gradle 安装没问题；以后如果从其他渠道侧载，可能需要先在系统设置里「允许受限设置」。

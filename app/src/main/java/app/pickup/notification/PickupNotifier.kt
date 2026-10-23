@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.SQLException
 import android.os.Build
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -14,7 +15,10 @@ import app.pickup.data.ParcelRepository
 import app.pickup.model.Parcel
 import javax.inject.Inject
 
-/** 新包裹通知，一件包裹一条（spec message_source.md §6） */
+/**
+ * 新包裹通知（spec message_source.md §6）：每批新包裹（一条短信）发一条，用同一个 ID 覆盖上一条，
+ * 通知栏里只留一条最新的待取概览，不会挂着几条件数不同的旧通知。
+ */
 class PickupNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
     private val parcelRepository: ParcelRepository,
@@ -23,14 +27,13 @@ class PickupNotifier @Inject constructor(
 
     suspend fun notifyNewParcels(parcels: List<Parcel>) {
         if (parcels.isEmpty() || !canNotify()) return
-        val pending = parcelRepository.getPendingParcels()
-        val pendingCount = if (pending.isNotEmpty()) pending.size else parcels.size
-        val locationCount = if (pending.isNotEmpty()) {
-            pending.map { it.location }.distinct().size
-        } else {
-            parcels.map { it.location }.distinct().size
+        // 读不到全部待取包裹时只统计这一批：通知照发，也不让异常打断接收器随后推进扫描位置
+        val pending = try {
+            parcelRepository.getPendingParcels()
+        } catch (_: SQLException) {
+            parcels
         }
-        val contentText = formatContent(context, pendingCount, locationCount)
+        val summary = summarizePending(pending)
 
         manager.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL_NEW_PARCEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
@@ -44,19 +47,19 @@ class PickupNotifier @Inject constructor(
             context.packageManager.getLaunchIntentForPackage(context.packageName),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        for (parcel in parcels) {
-            val title = formatTitle(context, parcel.location)
-            val notification = NotificationCompat.Builder(context, CHANNEL_NEW_PARCEL)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title)
-                .setContentText(contentText)
-                .setWhen(parcel.arrivedAt.toEpochMilli())
-                .setShowWhen(true)
-                .setContentIntent(openApp)
-                .setAutoCancel(true)
-                .build()
-            manager.notify(parcel.id.toInt(), notification)
-        }
+        val title = batchLocation(parcels)
+            ?.let { context.getString(R.string.notification_title_with_location, it) }
+            ?: context.getString(R.string.notification_title_no_location)
+        val notification = NotificationCompat.Builder(context, CHANNEL_NEW_PARCEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(context.getString(R.string.notification_content, summary.count, summary.locationCount))
+            .setWhen(parcels.maxOf { it.arrivedAt }.toEpochMilli())
+            .setShowWhen(true)
+            .setContentIntent(openApp)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     /** 打开取件清单时清掉：通知里的包裹清单上都有 */
@@ -68,25 +71,19 @@ class PickupNotifier @Inject constructor(
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
             manager.areNotificationsEnabled()
 
-    companion object {
+    private companion object {
         const val CHANNEL_NEW_PARCEL = "new_parcel"
-
-        fun formatTitleText(location: String?): String =
-            location?.takeIf { it.isNotBlank() }?.let {
-                "新包裹已到达$it"
-            } ?: "新包裹已到达"
-
-        fun formatContentText(pendingCount: Int, locationCount: Int): String =
-            "剩${pendingCount}件未取包裹，在${locationCount}个地点。"
-
-        /** 标题显示「新包裹已到达xxx」，未识别地点时显示「新包裹已到达」 */
-        fun formatTitle(context: Context, location: String?): String =
-            location?.takeIf { it.isNotBlank() }?.let {
-                context.getString(R.string.notification_title_with_location, it)
-            } ?: context.getString(R.string.notification_title_no_location)
-
-        /** 内容：剩x件未取包裹，在x个地点。 */
-        fun formatContent(context: Context, pendingCount: Int, locationCount: Int): String =
-            context.getString(R.string.notification_content, pendingCount, locationCount)
+        const val NOTIFICATION_ID = 1
     }
 }
+
+/** 通知正文的待取概览 */
+internal data class PendingSummary(val count: Int, val locationCount: Int)
+
+/** 件数与地点数；未识别地点的包裹合起来也算一个地点（spec message_source.md §6） */
+internal fun summarizePending(pending: List<Parcel>): PendingSummary =
+    PendingSummary(count = pending.size, locationCount = pending.map { it.location }.distinct().size)
+
+/** 标题里的地点：这一批都在同一个已识别地点时才有，否则标题不带地点 */
+internal fun batchLocation(parcels: List<Parcel>): String? =
+    parcels.map { it.location }.distinct().singleOrNull()?.takeIf { it.isNotBlank() }

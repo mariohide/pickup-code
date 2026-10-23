@@ -13,7 +13,7 @@ import java.time.Instant
 import javax.inject.Inject
 
 /**
- * 撤掉短信应用为取件短信发的通知，取件码通知由本应用发，同一条短信只提醒一次（spec message_source.md §6）。
+ * 撤掉短信应用为取件短信发的通知，改由本应用发新包裹通知，同一条短信只提醒一次（spec message_source.md §6）。
  * 只看默认短信应用的通知，按通知里最新一条短信的正文判断是不是取件短信。
  */
 @AndroidEntryPoint
