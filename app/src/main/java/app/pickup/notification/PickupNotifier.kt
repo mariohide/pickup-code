@@ -57,22 +57,31 @@ class PickupNotifier @Inject constructor(
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
             manager.areNotificationsEnabled()
 
-    /** 有码显示码，没码显示取件说明 */
-    private fun Parcel.headline(): String = when (val method = pickupMethod) {
-        is PickupMethod.ShelfCode -> method.code
-        is PickupMethod.LockerCode -> method.code
-        is PickupMethod.IdentityCode -> method.instruction
-        is PickupMethod.Other -> method.instruction
-    }
+    /** 标题显示地点，未识别地点时显示「新包裹」 */
+    private fun Parcel.headline(): String =
+        location ?: context.getString(R.string.new_parcel_channel)
 
-    /** 地点，快递柜再加柜号、格口，如「华强北路12号 · 7号柜 · 23格口」 */
+    /** 正文显示柜号格口、快递公司与手机尾号等次要信息，不含取件码（保护隐私并引导到应用内看码） */
     private fun Parcel.detail(): String {
-        val locker = pickupMethod as? PickupMethod.LockerCode
-        return listOfNotNull(
-            location ?: context.getString(R.string.unknown_location),
-            locker?.lockerNumber?.let { context.getString(R.string.locker_number, it) },
-            locker?.compartment?.let { context.getString(R.string.compartment, it) },
-        ).joinToString(" · ")
+        val methodDetail = when (val method = pickupMethod) {
+            is PickupMethod.ShelfCode -> null
+            is PickupMethod.LockerCode -> listOfNotNull(
+                method.lockerNumber?.let { context.getString(R.string.locker_number, it) },
+                method.compartment?.let { context.getString(R.string.compartment, it) },
+            ).joinToString(" · ").takeIf { it.isNotEmpty() }
+            is PickupMethod.IdentityCode -> method.instruction
+            is PickupMethod.Other -> method.instruction
+        }
+        val items = listOfNotNull(
+            methodDetail,
+            carrier,
+            phoneTail?.let { context.getString(R.string.phone_tail, it) },
+        )
+        return if (items.isNotEmpty()) {
+            items.joinToString(" · ")
+        } else {
+            context.getString(R.string.tap_to_view_code)
+        }
     }
 
     private companion object {
