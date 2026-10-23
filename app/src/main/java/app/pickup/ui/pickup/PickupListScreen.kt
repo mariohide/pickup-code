@@ -293,6 +293,7 @@ private fun PickupList(
                 PermissionBanner(
                     text = stringResource(R.string.sms_permission_off),
                     onEnable = onEnableSmsPermission,
+                    critical = true,
                     modifier = animateListItem().padding(bottom = 8.dp),
                 )
             }
@@ -412,13 +413,25 @@ private fun LazyItemScope.SegmentedParcelCard(
     )
 }
 
-/** 短信读取权限或通知使用权关闭时的常驻横幅（spec §9）：随列表滚动，不加图标 */
+/**
+ * 短信权限或通知使用权关闭时的常驻横幅（spec §9）：随列表滚动，不加图标。
+ * [critical] 用于短信权限：关了新包裹一件都进不来，用 error 色系；通知使用权可选，用中性色。
+ */
 @Composable
-private fun PermissionBanner(text: String, onEnable: () -> Unit, modifier: Modifier = Modifier) {
+private fun PermissionBanner(
+    text: String,
+    onEnable: () -> Unit,
+    modifier: Modifier = Modifier,
+    critical: Boolean = false,
+) {
+    val colors = MaterialTheme.colorScheme
+    val containerColor = if (critical) colors.errorContainer else colors.surfaceContainer
+    val contentColor = if (critical) colors.onErrorContainer else colors.onSurfaceVariant
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = containerColor,
+        contentColor = contentColor,
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -428,11 +441,14 @@ private fun PermissionBanner(text: String, onEnable: () -> Unit, modifier: Modif
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             // 跳到系统设置，按全应用口径写「去设置」并带外跳图标（AGENTS.md 按钮口径）
-            TextButton(onClick = onEnable, shapes = ButtonDefaults.shapes()) {
+            TextButton(
+                onClick = onEnable,
+                shapes = ButtonDefaults.shapes(),
+                colors = if (critical) ButtonDefaults.textButtonColors(contentColor = contentColor) else ButtonDefaults.textButtonColors(),
+            ) {
                 Text(stringResource(R.string.open_settings))
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 Icon(Icons.Rounded.ArrowOutward, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))

@@ -32,8 +32,8 @@
     <string name="load_failed">加载失败</string>
     <string name="retry">重试</string>
     <string name="scan_sms_failed">扫描短信失败</string>
-    <string name="sms_permission_off">短信读取权限已关闭，新包裹可能漏记</string>
-    <string name="notification_access_off">通知使用权已关闭，取件短信会重复提醒</string>
+    <string name="sms_permission_off">短信权限已关闭，新到的包裹不会记录。</string>
+    <string name="notification_access_off">通知使用权已关闭，取件短信会重复提醒。</string>
     <string name="open_settings">去设置</string>
 
     <string name="new_parcel_channel">新包裹</string>
