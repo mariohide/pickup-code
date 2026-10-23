@@ -1,6 +1,6 @@
 # AGENTS.md
 
-项目文档的总入口。在本仓库工作的编码助手（Claude Code、Gemini 等）先读这里，其他文档都从这里找；约定之间有冲突时，以本文件为准。
+项目文档的总入口。在本仓库工作的编码助手（Claude Code、Gemini 等）先读这里，其他文档都从这里找。产品行为以 `specs/` 为准；工作方式与约定以本文件为准。
 
 ## 项目
 
@@ -10,7 +10,7 @@
 
 | 文档 | 内容 |
 |---|---|
-| `AGENTS.md` | 本文件：项目概况、工作约定、环境、架构、界面约定、发版与提交规范 |
+| `AGENTS.md` | 本文件：项目概况、工作约定、构建约束、架构主干、界面约定、发版与提交规范 |
 | `README.md` | 给人看的项目介绍、特性与许可证 |
 | `specs/pickup_list.md` | 取件清单页的规格 |
 | `specs/message_source.md` | 消息来源（短信）、解析、去重、权限、新包裹通知的规格 |
@@ -28,11 +28,11 @@
 
 ## 环境与构建
 
-- JDK 21：`JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home`。
-- 直接用 Compose Material3 预发布版（1.5.0-beta02，含 Expressive）。它与 hilt-lifecycle-viewmodel-compose 1.4.0 要求 compileSdk ≥ 37；AGP 9.4.1 要求 Gradle ≥ 9.6（当前 9.8.2）。
-- 图标用 material-icons-extended 1.7.8（完整图标集），release 包靠 R8 裁剪。
-- 导航：Navigation 3 1.2.0 + lifecycle-viewmodel-navigation3；lifecycle 统一 2.11.0；kotlinx-serialization 1.12.0（NavKey 序列化）。
-- 测试机：Galaxy S24（SM-S9210，API 36）；早先用过 Pixel 2 XL（LineageOS，API 35）。
+依赖版本见 `gradle/libs.versions.toml`，这里只记构建文件里看不出的约束。本机路径、测试机等个人环境不进仓库，各自记在不提交的本地文件里（Claude Code 用 `CLAUDE.local.md`）。
+
+- 需要 JDK 21。
+- 用 Compose Material3 预发布版（含 Expressive）：它与 hilt-lifecycle-viewmodel-compose 要求 compileSdk ≥ 37；AGP 9.4 要求 Gradle ≥ 9.6。
+- 图标用完整的 material-icons-extended，release 包靠 R8 裁剪。
 - 常用命令：
   - 单测：`./gradlew :app:testDebugUnitTest`
   - 装到测试机并启动：`./gradlew :app:installDebug && adb shell am force-stop app.pickup && adb shell am start -n app.pickup/.MainActivity`
@@ -40,17 +40,15 @@
   - 签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
   - R8 混淆不需要额外保留规则：NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`。
   - 手动装 release 包要用 `adb install --no-incremental`：默认的增量安装会跳过预编译，应用全程解释执行，动画明显卡顿。装好后启动一次，再 `adb shell cmd package compile -m speed-profile -f app.pickup` 按基线配置文件预编译。
-- 版本管理：git，主分支 `main`，远端 GitHub `mariohide/pickup-code`（公开）。
 
 ## 架构
 
-- NiA 风格的单向数据流：每页单一 UiState；仓库直接抛出异常，ViewModel 在动作协程里捕获；不设全局兜底提示。
-- 导航在 `ui/PickupApp.kt`，每页一个 NavKey，配 ViewModel 装饰器；转场用 Navigation 3 默认的。
-- 取件清单的 ViewModel 在导航时不销毁，所以去其他页面前调 `leave()` 重新归类（pickup_list §7）。
-- 短信扫描：`SmsInbox`（ContentResolver 读收件箱）→ `PickupSmsParser`（纯规则解析）→ `ParcelDeduplicator` → `SmsScanRepository` 在一个事务里入库并推进 `scan_cursor`。数据库 v2，用 AutoMigration 从 v1 升级。
-- 短信权限放在界面层：`PickupListRoute` 在 `LifecycleStartEffect` 里检查权限，并请求权限或静默扫描；横幅状态不进 UiState。
-- 新短信：`notification/SmsReceivedReceiver`（`SMS_RECEIVED` 广播）→ `MessageScanRepository.importReceivedSms` 解析去重入库 → `PickupNotifier` 发新包裹通知，再顺带 `scanSms()` 推进扫描位置。`notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的通知。
-- 单测共享的假仓库在 `app/src/test/.../data/`（`FakeParcelRepository`、`FakeMessageScanRepository`）。
+只记主干，细节看代码与规格。
+
+- NiA 风格的单向数据流：每页单一 UiState；仓库直接抛出异常，ViewModel 在动作协程里捕获。
+- 导航在 `ui/PickupApp.kt`（Navigation 3，每页一个 NavKey）。取件清单的 ViewModel 在导航时不销毁，去其他页面前调 `leave()` 重新归类（pickup_list §7）。
+- 短信进清单有两条路：进入页面、回到前台、下拉刷新时扫描收件箱（`SmsScanRepository`）；新短信到达时由 `notification/SmsReceivedReceiver` 即时导入并发通知（`PickupNotifier`）。两条路共用 `PickupSmsParser` 解析与 `ParcelDeduplicator` 去重。
+- `notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的重复通知。
 
 ## 界面约定
 
