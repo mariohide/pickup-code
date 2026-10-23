@@ -325,7 +325,7 @@ private fun PickupList(
         }
         if (content.picked.isNotEmpty()) {
             item(key = "picked-header") {
-                PickedHeader(content.picked.size, animateListItem().padding(top = 24.dp, bottom = 6.dp))
+                PickedHeader(content.picked.size, animateListItem().padding(top = 64.dp, bottom = 8.dp))
             }
             itemsIndexed(content.picked, key = { _, card -> card.id }, contentType = { _, _ -> "card" }) { index, card ->
                 SegmentedParcelCard(card, index, content.picked.size, onPickUp, onUndoPickUp)
@@ -526,17 +526,22 @@ private fun RevealAllDialog(pendingCount: Int, onConfirm: () -> Unit, onDismiss:
     )
 }
 
+/**
+ * 「2 件已取」：与汇总「N 件待取」同句式，表明是与待取区并列的另一个区，而不是又一个地点组（spec §2）。
+ * 比汇总小、用低对比色，与已取卡片整体弱化一致；上方留 64dp 把两个区分开，不加分隔线。
+ */
 @Composable
 private fun PickedHeader(count: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = stringResource(R.string.picked_section_title),
-            style = MaterialTheme.typography.titleMedium,
+            text = count.toString(),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.alignByBaseline(),
         )
         Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.bodyMedium,
+            text = stringResource(R.string.picked_suffix),
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.alignByBaseline(),
         )

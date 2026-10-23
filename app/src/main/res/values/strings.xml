@@ -11,7 +11,7 @@
     <string name="reveal_all_confirm_body">本组 %1$d 件待取包裹将显示取件码，并全部记为已取。之后可以逐件撤销。</string>
     <string name="reveal">查看</string>
     <string name="no_pending_parcels">没有待取的包裹</string>
-    <string name="picked_section_title">已取</string>
+    <string name="picked_suffix">件已取</string>
 
     <string name="phone_tail">尾号 %1$s</string>
     <string name="arrived_on">%1$d月%2$d日到件</string>
