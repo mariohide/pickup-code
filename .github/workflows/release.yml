@@ -8,8 +8,9 @@ on:
       - '*'
   workflow_dispatch:
 
+# 默认只读，只有发版任务需要写 Release
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -45,6 +46,8 @@ jobs:
     needs: test
     if: needs.test.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -59,13 +62,21 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # 缺任何一项就失败：否则 Gradle 退回 debug 签名，而 CI 每次的 debug 密钥都不同，装过的手机无法覆盖更新
       - name: Decode Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > app/pickup-release.jks
-          fi
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::缺少发版签名密钥 ${name}，不发布 debug 签名的包"
+              exit 1
+            fi
+          done
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/pickup-release.jks
 
       - name: Build Release APK
         env:

@@ -59,6 +59,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            // 本地没配发版密钥时用 debug 签名，方便自测；CI 发版缺密钥时在工作流里就失败
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
