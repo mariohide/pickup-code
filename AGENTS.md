@@ -1,6 +1,66 @@
 # AGENTS.md
 
-给在本仓库工作的编码助手的约定。项目进度、环境与待办见 `docs/progress.md`，产品规格见 `specs/`。
+项目文档的总入口。在本仓库工作的编码助手（Claude Code、Gemini 等）先读这里，其他文档都从这里找；约定之间有冲突时，以本文件为准。
+
+## 项目
+
+自用的取件码 Android 应用（包名 `app.pickup`）：从取件短信里解析取件码，按取件地点分组成待取清单，新包裹到时发通知。严格离线，不申请网络权限。开源，GPL-3.0。
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| `AGENTS.md` | 本文件：项目概况、工作约定、环境、架构、界面约定、发版与提交规范 |
+| `README.md` | 给人看的项目介绍、特性与许可证 |
+| `specs/pickup_list.md` | 取件清单页的规格 |
+| `specs/message_source.md` | 消息来源（短信）、解析、去重、权限、新包裹通知的规格 |
+| `specs/settings.md` | 设置页的规格 |
+| `docs/progress.md` | 开发进度：已实现的规格、界面定稿（含试过又放弃的做法）、待办 |
+| `.github/workflows/release.yml` | CI：打 tag 或手动触发时跑单测并发版 |
+| `LICENSE` | GPL-3.0 全文 |
+
+## 工作方式
+
+- 用中文交流；文档与代码注释也用中文，沿用现有写法。
+- 规格先行：改行为先改 `specs/`，再改代码；规格里的决定注明日期。
+- 进度、界面定稿与待办记在 `docs/progress.md`，不要只留在助手自己的记忆里。用户说「记录进度」时更新它。
+- 改完界面：编译、跑单测、装到测试机并启动，由用户在真机上看。不主动截图、录屏或抽帧，截图读图很费 token；只有用户要求，或必须截图才能定位用户报的具体问题时才截。汇报时说清哪些没在真机上看过。
+
+## 环境与构建
+
+- JDK 21：`JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home`。
+- 直接用 Compose Material3 预发布版（1.5.0-beta02，含 Expressive）。它与 hilt-lifecycle-viewmodel-compose 1.4.0 要求 compileSdk ≥ 37；AGP 9.4.1 要求 Gradle ≥ 9.6（当前 9.8.2）。
+- 图标用 material-icons-extended 1.7.8（完整图标集），release 包靠 R8 裁剪。
+- 导航：Navigation 3 1.2.0 + lifecycle-viewmodel-navigation3；lifecycle 统一 2.11.0；kotlinx-serialization 1.12.0（NavKey 序列化）。
+- 测试机：Galaxy S24（SM-S9210，API 36）；早先用过 Pixel 2 XL（LineageOS，API 35）。
+- 常用命令：
+  - 单测：`./gradlew :app:testDebugUnitTest`
+  - 装到测试机并启动：`./gradlew :app:installDebug && adb shell am force-stop app.pickup && adb shell am start -n app.pickup/.MainActivity`
+- release 包：
+  - 签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
+  - R8 混淆不需要额外保留规则：NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`。
+  - 手动装 release 包要用 `adb install --no-incremental`：默认的增量安装会跳过预编译，应用全程解释执行，动画明显卡顿。装好后启动一次，再 `adb shell cmd package compile -m speed-profile -f app.pickup` 按基线配置文件预编译。
+- 版本管理：git，主分支 `main`，远端 GitHub `mariohide/pickup-code`（公开）。
+
+## 架构
+
+- NiA 风格的单向数据流：每页单一 UiState；仓库直接抛出异常，ViewModel 在动作协程里捕获；不设全局兜底提示。
+- 导航在 `ui/PickupApp.kt`，每页一个 NavKey，配 ViewModel 装饰器；转场用 Navigation 3 默认的。
+- 取件清单的 ViewModel 在导航时不销毁，所以去其他页面前调 `leave()` 重新归类（pickup_list §7）。
+- 短信扫描：`SmsInbox`（ContentResolver 读收件箱）→ `PickupSmsParser`（纯规则解析）→ `ParcelDeduplicator` → `SmsScanRepository` 在一个事务里入库并推进 `scan_cursor`。数据库 v2，用 AutoMigration 从 v1 升级。
+- 短信权限放在界面层：`PickupListRoute` 在 `LifecycleStartEffect` 里检查权限，并请求权限或静默扫描；横幅状态不进 UiState。
+- 新短信：`notification/SmsReceivedReceiver`（`SMS_RECEIVED` 广播）→ `MessageScanRepository.importReceivedSms` 解析去重入库 → `PickupNotifier` 发新包裹通知，再顺带 `scanSms()` 推进扫描位置。`notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的通知。
+- 单测共享的假仓库在 `app/src/test/.../data/`（`FakeParcelRepository`、`FakeMessageScanRepository`）。
+
+## 界面约定
+
+- 直接用 Material 3 Expressive：优先选 Expressive 组件与 MotionScheme，不必回避 `@ExperimentalMaterial3ExpressiveApi`。
+- 克制：列表里重复出现的元素会把强调样式放大 N 倍。用户看过第一版后评价「眼花缭乱」。
+  - 重复的卡片内控件用 tonal、text 按钮和低对比色。
+  - 不加纯装饰的图标、分隔线、自明的标签。
+  - Emphasized 字体只留给全屏唯一的重点（如待取件数）。
+- 配色：页面背景用 `surface`；取件卡片容器用 `surfaceContainerLow`，已取区靠整体透明度弱化，不换容器色；设置页分段列表项容器用 `surfaceContainer`（`SegmentedListItem` 默认是 `surface`，要显式指定）。不靠改页面底色制造对比。
+- 界面以真机为准。Figma 原型（https://www.figma.com/design/o202auUlAwNL6V1wD8H2mQ ）只剩「图标」页有用：启动图标与通知图标的设计稿；界面原型停在第一版，不要当设计依据，也不要去同步。
 
 ## 发版
 

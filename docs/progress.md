@@ -1,28 +1,8 @@
 # 开发进度
 
-自用取件码 Android 应用（包名 `app.pickup`），2026-10-22 起步。规格先行，见 `specs/`。
+自用取件码 Android 应用，2026-10-22 起步。这里只记进度、界面定稿与待办；项目概况、环境、架构与工作约定见 `AGENTS.md`。
 
-> 最近更新：2026-10-22（新短信即时通知，撤掉短信应用的重复提醒）
-
-## 环境
-
-- 构建用 JDK 21：`JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home`。
-- 直接用 Compose Material3 预发布版（1.5.0-beta02，含 Expressive）。它与 hilt-lifecycle-viewmodel-compose 1.4.0 要求 compileSdk ≥ 37；AGP 9.4.1 要求 Gradle ≥ 9.6（当前 9.8.2）。
-- 图标：material-icons-extended 1.7.8（完整图标集），release 包靠 R8 裁剪（2026-10-22 定）。
-- 导航：Navigation 3 1.2.0 + lifecycle-viewmodel-navigation3；lifecycle 统一 2.11.0；kotlinx-serialization 1.12.0（NavKey 序列化）。
-- 测试机：Pixel 2 XL（LineageOS，API 35）。
-- release 包：R8 混淆不需要额外保留规则。NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`，类名在同一个包内一致；真机已验证设置页在进程被杀后能恢复（2026-10-22）。签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
-- 版本管理：git，主分支 `main`，远端 GitHub `mariohide/pickup-code`（公开，GPL-3.0）。
-
-## 架构
-
-- NiA 风格的单向数据流：每页单一 UiState；仓库直接抛出异常，ViewModel 在动作协程里捕获；不设全局兜底提示。
-- 导航在 `ui/PickupApp.kt`，每页一个 NavKey，配 ViewModel 装饰器。
-- 取件清单的 ViewModel 在导航时不销毁，所以去其他页面前调 `leave()` 重新归类（pickup_list §7）。
-- 不再内置示例数据（2026-10-22 去掉）：清单里只有从短信解析出的包裹。
-- 短信扫描：`SmsInbox`（ContentResolver 读收件箱）→ `PickupSmsParser`（纯规则解析）→ `ParcelDeduplicator` → `SmsScanRepository` 在一个事务里入库并推进 `scan_cursor`。数据库 v2，用 AutoMigration 从 v1 升级。
-- 短信权限放在界面层：`PickupListRoute` 在 `LifecycleStartEffect` 里检查权限，并请求权限或静默扫描；横幅状态不进 UiState。
-- 新短信：`notification/SmsReceivedReceiver`（`SMS_RECEIVED` 广播）→ `MessageScanRepository.importReceivedSms` 解析去重入库 → `PickupNotifier` 发新包裹通知，再顺带 `scanSms()` 推进扫描位置。`notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的通知。
+> 最近更新：2026-10-23（新包裹通知改为待取概览；环境与架构移到 AGENTS.md）
 
 ## 已实现
 
@@ -32,7 +12,7 @@
 | `specs/message_source.md` | 短信来源、解析、去重、权限、新包裹通知 | 2026-10-22 新写，数值已确认，用着有问题再调；§6 的接收器与通知监听没有单测，需真机验证 |
 | `specs/settings.md` | 全部 | 清单顶栏齿轮 → 设置页，「危险操作 · 清空已取数据」 |
 
-单测 51 条全部通过：清单 builder 6 条、清单 ViewModel 13 条、设置 ViewModel 5 条、短信解析 19 条、真实短信语料 2 条（21 个样例，取自 PickupCodeGrabber，MIT 许可）、去重 6 条。共享的假仓库在 `app/src/test/.../data/`（`FakeParcelRepository`、`FakeMessageScanRepository`）。`SmsScanRepository` 依赖 Room 和 ContentResolver，没有单测，需要在真机上验证。
+单测 55 条全部通过：清单 builder 6 条、清单 ViewModel 13 条、设置 ViewModel 5 条、短信解析 19 条、真实短信语料 2 条（21 个样例，取自 PickupCodeGrabber，MIT 许可）、去重 6 条、新包裹通知统计 4 条。`SmsScanRepository` 依赖 Room 和 ContentResolver，没有单测，需要在真机上验证。
 
 ## 界面定稿（2026-10-22）
 

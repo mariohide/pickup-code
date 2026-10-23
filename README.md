@@ -20,6 +20,10 @@
 - JDK 21
 - Gradle 9.8.2
 
+## 开发
+
+规格在 `specs/`，进度在 `docs/progress.md`；工作约定、环境与架构见 [`AGENTS.md`](AGENTS.md)，所有文档从那里索引。
+
 ## 许可证
 
 Copyright (C) 2026 mariohide
