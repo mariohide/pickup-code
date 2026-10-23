@@ -29,9 +29,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # 停在 v5：v6 起缓存改由闭源组件提供，升级即接受 Gradle 的商业使用条款
+      # v6 起缓存由闭源组件提供，升级即接受 Gradle 使用条款；公开仓库目前免费
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
@@ -61,7 +61,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       # 缺任何一项就失败：否则 Gradle 退回 debug 签名，而 CI 每次的 debug 密钥都不同，装过的手机无法覆盖更新
       - name: Decode Release Keystore
