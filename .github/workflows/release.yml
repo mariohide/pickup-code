@@ -1,9 +1,8 @@
 name: Release
 
+# 只在发版时运行：打 tag 发正式版；手动触发则把所选分支构建为预发布的 latest
 on:
   push:
-    branches:
-      - main
     tags:
       - '*'
   workflow_dispatch:
@@ -14,10 +13,8 @@ permissions:
 
 jobs:
   test:
-    name: Test & Release Check
+    name: Test
     runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
 
     steps:
       - name: Checkout code
@@ -36,16 +33,9 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
-      - name: Check Release Condition
-        id: check
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 .github/scripts/check_release_due.py
-
   publish-release:
     name: Build & Publish Release
     needs: test
-    if: needs.test.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -120,7 +110,7 @@ jobs:
           else
             TAG_NAME="latest"
             TITLE="Latest Build (v${VERSION} - ${GITHUB_SHA:0:7})"
-            echo "Updating latest release on main push (> 24h since last release)"
+            echo "Updating latest prerelease from manual run on ${{ github.ref_name }}"
             if gh release view "$TAG_NAME" >/dev/null 2>&1; then
               gh release delete "$TAG_NAME" --yes --cleanup-tag || true
             fi
