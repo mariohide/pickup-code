@@ -15,7 +15,7 @@
 | `specs/pickup_list.md` | 取件清单页的规格 |
 | `specs/message_source.md` | 消息来源（短信）、解析、去重、权限、新包裹通知的规格 |
 | `specs/settings.md` | 设置页的规格 |
-| `specs/onboarding.md` | 首次引导的规格（已定稿、未实现；原型在 Figma「首次引导」页，链接见规格） |
+| `specs/onboarding.md` | 首次引导的规格（原型在 Figma「首次引导」页，链接见规格） |
 | `docs/progress.md` | 开发进度：已实现的规格、界面定稿（含试过又放弃的做法）、待办 |
 | `docs/screenshots/` | README 截图。用演示数据拍：临时给 debug 包加 `.demo` 后缀、在数据库里写入假包裹，装成独立应用，不碰真实数据；拍完卸载并撤销改动 |
 | `.github/workflows/release.yml` | CI：打 tag 或手动触发时跑单测并发版 |
@@ -52,6 +52,7 @@
 - 导航在 `ui/PickupApp.kt`（Navigation 3，每页一个 NavKey）。取件清单的 ViewModel 在导航时不销毁，去其他页面前调 `leave()` 重新归类（pickup_list §7）。
 - 短信进清单有两条路：进入页面、回到前台、下拉刷新时扫描收件箱（`SmsScanRepository`）；新短信到达时由 `notification/SmsReceivedReceiver` 即时导入并发通知（`PickupNotifier`）。两条路共用 `PickupSmsParser` 解析与 `ParcelDeduplicator` 去重。
 - `notification/SmsNotificationListener`（通知使用权）撤掉默认短信应用为取件短信发的重复通知。
+- 引导是否完成、横幅「不再提示」记在 `data/UserPreferences`（SharedPreferences，启动时同步读，决定首屏是引导还是清单）。权限状态与「开启 / 去设置」的操作由引导页和清单横幅共用的 `ui/permission/AppPermissions` 负责，回到页面时重新检查。
 
 ## 界面约定
 
@@ -61,7 +62,7 @@
   - 不加纯装饰的图标、分隔线、自明的标签。
   - Emphasized 字体只留给全屏唯一的重点（如待取件数）。
 - 按钮口径（全应用一致，2026-10-23 定）：按点了之后会不会离开本应用来定。在本应用里完成的（含弹系统权限窗）写「开启」等动词；跳到系统设置等本应用以外页面的写「去设置」，后面带外跳图标 `Icons.Rounded.ArrowOutward`，句中链接同样带这个图标（用 `InlineTextContent` 嵌入）。代码里一律用图标，不用「↗」等字符代替。不写「去开启」：「去」暗示跳转。
-- 配色：页面背景用 `surface`；取件卡片容器用 `surfaceContainerLow`，已取区靠整体透明度弱化，不换容器色；设置页分段列表项容器用 `surfaceContainer`（`SegmentedListItem` 默认是 `surface`，要显式指定）。不靠改页面底色制造对比。
+- 配色：页面背景用 `surface`；取件卡片、引导页的权限行容器用 `surfaceContainerLow`，引导页的核心设计卡片用 `primaryContainer`（引导页 2026-10-23 定），已取区靠整体透明度弱化，不换容器色；设置页分段列表项容器用 `surfaceContainer`（`SegmentedListItem` 默认是 `surface`，要显式指定）。不靠改页面底色制造对比。
 - 界面以真机为准。Figma 文件（https://www.figma.com/design/o202auUlAwNL6V1wD8H2mQ ）里：「图标」页是启动图标与通知图标的设计稿；「首次引导」页是该功能实现前的原型（2026-10-23），实现后以真机为准。已实现的界面不在 Figma 里维护，不要去同步。
 
 ## 发版
