@@ -63,6 +63,7 @@
   - Emphasized 字体只留给全屏唯一的重点（如待取件数）。
 - 按钮口径（全应用一致，2026-10-23 定）：按点了之后会不会离开本应用来定。在本应用里完成的（含弹系统权限窗）写「开启」等动词；跳到系统设置等本应用以外页面的写「去设置」，后面带外跳图标 `Icons.Rounded.ArrowOutward`，句中链接同样带这个图标（用 `InlineTextContent` 嵌入）。代码里一律用图标，不用「↗」等字符代替。不写「去开启」：「去」暗示跳转。
 - 配色：页面背景用 `surface`；取件卡片、引导页的权限行容器用 `surfaceContainerLow`，引导页的核心设计卡片用 `primaryContainer`（引导页 2026-10-23 定），已取区靠整体透明度弱化，不换容器色；设置页分段列表项容器用 `surfaceContainer`（`SegmentedListItem` 默认是 `surface`，要显式指定）。不靠改页面底色制造对比。
+- 顶栏与状态栏（2026-10-23 定）：内容铺满整屏、在状态栏后面滚动。可滚动的长页面用 `ui/component/ScrollAwayTopAppBar`（仿 Google 相册：顶栏随内容滚走，在中段往上滚时浮起，连同状态栏换成不透明的 `surfaceContainer`）；没有顶栏的页面只叠 `ui/component/StatusBarScrim`（页面底色到透明的渐变）。固定在内容上方的栏（如引导页底部按钮区）浮在内容上时同样用不透明的 `surfaceContainer`，不用半透明底色。
 - 界面以真机为准。Figma 文件（https://www.figma.com/design/o202auUlAwNL6V1wD8H2mQ ）里：「图标」页是启动图标与通知图标的设计稿；「首次引导」页是该功能实现前的原型（2026-10-23），实现后以真机为准。已实现的界面不在 Figma 里维护，不要去同步。
 
 ## 发版
