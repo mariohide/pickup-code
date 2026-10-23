@@ -5,16 +5,18 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - '*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-release:
-    name: Build & Publish Release
+  test:
+    name: Test & Release Check
     runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
 
     steps:
       - name: Checkout code
@@ -31,6 +33,31 @@ jobs:
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
+
+      - name: Check Release Condition
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/check_release_due.py
+
+  publish-release:
+    name: Build & Publish Release
+    needs: test
+    if: needs.test.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Decode Release Keystore
         env:
@@ -70,7 +97,7 @@ jobs:
         run: |
           VERSION="${{ steps.prepare.outputs.VERSION }}"
           
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          if [[ "${{ github.ref_type }}" == "tag" || "${{ github.ref }}" == refs/tags/* ]]; then
             TAG_NAME="${{ github.ref_name }}"
             TITLE="Release $TAG_NAME"
             echo "Publishing release for tag $TAG_NAME"
@@ -81,7 +108,7 @@ jobs:
           else
             TAG_NAME="latest"
             TITLE="Latest Build (v${VERSION} - ${GITHUB_SHA:0:7})"
-            echo "Updating latest release on main push"
+            echo "Updating latest release on main push (> 24h since last release)"
             if gh release view "$TAG_NAME" >/dev/null 2>&1; then
               gh release delete "$TAG_NAME" --yes --cleanup-tag || true
             fi
