@@ -16,6 +16,7 @@
 | `specs/message_source.md` | 消息来源（短信）、解析、去重、权限、新包裹通知的规格 |
 | `specs/settings.md` | 设置页的规格 |
 | `docs/progress.md` | 开发进度：已实现的规格、界面定稿（含试过又放弃的做法）、待办 |
+| `docs/screenshots/` | README 截图。用演示数据拍：临时给 debug 包加 `.demo` 后缀、在数据库里写入假包裹，装成独立应用，不碰真实数据；拍完卸载并撤销改动 |
 | `.github/workflows/release.yml` | CI：打 tag 或手动触发时跑单测并发版 |
 | `LICENSE` | GPL-3.0 全文 |
 
