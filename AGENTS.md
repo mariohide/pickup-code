@@ -20,6 +20,7 @@
 | `docs/screenshots/` | README 截图。用演示数据拍：临时给 debug 包加 `.demo` 后缀、在数据库里写入假包裹，装成独立应用，不碰真实数据；拍完卸载并撤销改动 |
 | `baselineprofile/` | 生成 release 包的基线配置文件（Macrobenchmark），结果提交在 `app/src/release/generated/baselineProfiles/`（见「环境与构建」） |
 | `.github/workflows/release.yml` | CI：打 tag 或手动触发时跑单测并发版 |
+| `scripts/privacy_gate.py` | 推送前的隐私闸门，由 `.githooks/pre-push` 调用（见「提交信息」） |
 | `LICENSE` | GPL-3.0 全文 |
 
 ## 工作方式
@@ -34,6 +35,7 @@
 依赖版本见 `gradle/libs.versions.toml`，这里只记构建文件里看不出的约束。本机路径、测试机等个人环境不进仓库，各自记在不提交的本地文件里（Claude Code 用 `CLAUDE.local.md`）。
 
 - 需要 JDK 21。
+- 新克隆后启用隐私闸门：`git config core.hooksPath .githooks`，并在仓库根目录建本机的 `.privacy-patterns`（不提交，每行一个正则：邮箱、姓名、设备序列号、主机名等）。
 - 用 Compose Material3 预发布版（含 Expressive）：它与 hilt-lifecycle-viewmodel-compose 要求 compileSdk ≥ 37；AGP 9.4 要求 Gradle ≥ 9.6。
 - 图标用完整的 material-icons-extended，release 包靠 R8 裁剪。
 - 常用命令：
@@ -84,6 +86,8 @@
 4. 推送 main 与 tag 后跟进 CI 结果。
 
 ## 提交信息
+
+- **推送 GitHub 前必须过隐私闸门**（2026-10-23 定）：pre-push 钩子扫描要推送的提交，作者邮箱不是 noreply、出现本机路径、邮箱、手机号、身份证号、私钥、写死的密码、签名配置等文件，或命中 `.privacy-patterns` 时拦下推送。被拦时停下，把命中项给用户看，改掉后再提交；不要擅自用 `--no-verify` 绕过，是否误报由用户判断。
 
 - 首行是简短摘要，中文约 25 字以内、整行不超过约 50 个字符，免得被折叠；沿用 `type(scope): 摘要` 前缀（如 `fix(notification):`、`ci:`、`docs:`）。
 - 首行只写一件事；细节、原因空一行后写在正文，多项用「- 」分条。首行写不下，就把细节挪进正文或拆成几个提交。
