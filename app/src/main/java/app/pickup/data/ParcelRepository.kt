@@ -22,6 +22,12 @@ interface ParcelRepository {
     suspend fun markPending(id: Long)
 
     /**
+     * 全部待取的包裹（pickedAt 为空）。
+     * 读取失败时抛出 [android.database.SQLException]。
+     */
+    suspend fun getPendingParcels(): List<Parcel>
+
+    /**
      * 记为已取的件数，含清单里已不显示的 30 天以前的。
      * 读取失败时流以 [android.database.SQLException] 结束。
      */
@@ -39,6 +45,9 @@ class RoomParcelRepository @Inject constructor(
 ) : ParcelRepository {
     override fun observeVisibleParcels(pickedSince: Instant): Flow<List<Parcel>> =
         dao.observeVisible(pickedSince.toEpochMilli()).map { entities -> entities.map { it.toDomain() } }
+
+    override suspend fun getPendingParcels(): List<Parcel> =
+        dao.pendingParcels().map { it.toDomain() }
 
     override suspend fun markPickedUp(id: Long, at: Instant) = dao.setPickedAt(id, at.toEpochMilli())
 

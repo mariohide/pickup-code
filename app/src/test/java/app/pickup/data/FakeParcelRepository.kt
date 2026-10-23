@@ -18,6 +18,11 @@ class FakeParcelRepository : ParcelRepository {
     override fun observeVisibleParcels(pickedSince: Instant): Flow<List<Parcel>> =
         items.map { if (failReads) throw SQLiteException() else it }
 
+    override suspend fun getPendingParcels(): List<Parcel> {
+        if (failReads) throw SQLiteException()
+        return items.value.filter { it.status == ParcelStatus.Pending }
+    }
+
     override suspend fun markPickedUp(id: Long, at: Instant) = setStatus(id, ParcelStatus.PickedUp(at))
 
     override suspend fun markPending(id: Long) = setStatus(id, ParcelStatus.Pending)

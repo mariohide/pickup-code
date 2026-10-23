@@ -19,7 +19,9 @@
     <string name="compartment">%1$s格口</string>
 
     <string name="reveal_code">查看取件码</string>
-    <string name="tap_to_view_code">点击查看取件码</string>
+    <string name="notification_title_with_location">新包裹已到达%1$s</string>
+    <string name="notification_title_no_location">新包裹已到达</string>
+    <string name="notification_content">剩%1$d件未取包裹，在%2$d个地点。</string>
     <string name="mark_picked_up">标记已取</string>
     <string name="undo_picked_up">撤销已取</string>
     <string name="restore_pending">改回待取</string>

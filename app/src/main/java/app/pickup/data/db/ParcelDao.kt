@@ -23,6 +23,10 @@ interface ParcelDao {
     @Query("DELETE FROM parcel WHERE picked_at IS NOT NULL")
     suspend fun deletePicked(): Int
 
+    /** 全部待取的包裹（用于通知统计未取件数与地点等） */
+    @Query("SELECT * FROM parcel WHERE picked_at IS NULL")
+    suspend fun pendingParcels(): List<ParcelEntity>
+
     /** [since] 之后到件的包裹，不论状态；去重时与新消息比对 */
     @Query("SELECT * FROM parcel WHERE arrived_at >= :since")
     suspend fun arrivedSince(since: Long): List<ParcelEntity>
