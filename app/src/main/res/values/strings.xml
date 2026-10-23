@@ -11,6 +11,7 @@
     <string name="reveal_all_confirm_body">本组 %1$d 件待取包裹将显示取件码，并全部记为已取。之后可以逐件撤销。</string>
     <string name="reveal">查看</string>
     <string name="no_pending_parcels">没有待取的包裹</string>
+    <string name="no_pending_parcels_hint">收到取件短信后，会自动出现在这里</string>
     <string name="picked_suffix">件已取</string>
 
     <string name="phone_tail">尾号 %1$s</string>
@@ -33,14 +34,19 @@
     <string name="retry">重试</string>
     <string name="scan_sms_failed">扫描短信失败</string>
     <string name="sms_permission_off">短信权限已关闭，新到的包裹不会记录。</string>
-    <string name="notification_access_off">通知使用权已关闭，取件短信会重复提醒。</string>
+    <string name="notifications_off">通知已关闭，新包裹到了不会提醒。关闭此提示后，可在「设置 › 使用说明与权限」里开启。</string>
+    <string name="notification_access_off">通知使用权已关闭，取件短信会重复提醒。关闭此提示后，可在「设置 › 使用说明与权限」里开启。</string>
+    <string name="dont_show_again">不再提示</string>
     <string name="open_settings">去设置</string>
+    <string name="enable">开启</string>
 
     <string name="new_parcel_channel">新包裹</string>
     <string name="notification_listener_label">撤掉取件短信的重复提醒</string>
 
     <string name="settings">设置</string>
     <string name="navigate_back">返回</string>
+    <string name="usage_guide">使用说明与权限</string>
+    <string name="usage_guide_description">查看「看码 = 已取」的说明，开启或检查各项权限</string>
     <string name="danger_zone">危险操作</string>
     <string name="clear_picked">清空已取数据</string>
     <string name="clear_picked_description">删除所有已取包裹的记录，待取包裹不受影响</string>
@@ -52,4 +58,24 @@
     <string name="cancel">取消</string>
     <string name="picked_cleared">已清空 %1$d 件已取记录</string>
     <string name="clear_picked_failed">清空失败</string>
+
+    <string name="onboarding_tagline">从取件短信里找出取件码，按地点整理好。</string>
+    <string name="onboarding_core_title">看码 = 已取</string>
+    <string name="onboarding_core_body">在驿站点击「查看取件码」，包裹会变更为「已取」。</string>
+    <string name="onboarding_permissions">权限</string>
+    <string name="permission_optional">（可选）</string>
+    <string name="permission_granted">已开启</string>
+    <string name="permission_sms">短信</string>
+    <string name="permission_sms_description">只在本机读取，应用不联网。</string>
+    <string name="permission_notifications">通知</string>
+    <string name="permission_notifications_description">新包裹到了提醒你。</string>
+    <string name="permission_notification_access">通知使用权</string>
+    <string name="permission_notification_access_description">撤掉短信应用的重复提醒。</string>
+    <!-- 受限设置提示：「应用信息」是链接，后面嵌外跳图标（spec onboarding §3） -->
+    <string name="restricted_settings_hint_before">开关是灰的？到</string>
+    <string name="restricted_settings_hint_link">应用信息</string>
+    <string name="restricted_settings_hint_after">右上角菜单里选「允许受限设置」。</string>
+    <string name="start_using">开始使用</string>
+    <string name="start_using_requires_sms">需先开启短信权限</string>
+    <string name="done">完成</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +42,7 @@ import app.pickup.ui.theme.PickupTheme
 @Composable
 fun SettingsRoute(
     onBack: () -> Unit,
+    onOpenUsageGuide: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -48,6 +50,7 @@ fun SettingsRoute(
     SettingsScreen(
         uiState = uiState,
         onBack = onBack,
+        onOpenUsageGuide = onOpenUsageGuide,
         onClearPicked = viewModel::clearPicked,
         onMessageShown = viewModel::onMessageShown,
         modifier = modifier,
@@ -58,6 +61,7 @@ fun SettingsRoute(
 fun SettingsScreen(
     uiState: SettingsUiState,
     onBack: () -> Unit,
+    onOpenUsageGuide: () -> Unit,
     onClearPicked: () -> Unit,
     onMessageShown: () -> Unit,
     modifier: Modifier = Modifier,
@@ -97,6 +101,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
+            UsageGuideItem(onClick = onOpenUsageGuide)
             // 不可恢复的操作单独成区，固定在页面最底部；以后的普通设置项排在它上面（spec settings §2）
             SectionHeader(stringResource(R.string.danger_zone), color = MaterialTheme.colorScheme.error)
             ClearPickedItem(uiState, onClick = { confirming = true })
@@ -123,6 +128,21 @@ private fun SectionHeader(text: String, color: Color, modifier: Modifier = Modif
         color = color,
         modifier = modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
     )
+}
+
+/** 打开首次引导页随时回看，也是被关掉的权限提示重新开启的入口（spec settings §3） */
+@Composable
+private fun UsageGuideItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+        modifier = modifier,
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
+        supportingContent = { Text(stringResource(R.string.usage_guide_description)) },
+    ) {
+        Text(stringResource(R.string.usage_guide))
+    }
 }
 
 @Composable
@@ -192,6 +212,7 @@ private fun SettingsScreenPreview() {
         SettingsScreen(
             uiState = SettingsUiState(PickedCount.Known(13), isClearing = false, message = null),
             onBack = {},
+            onOpenUsageGuide = {},
             onClearPicked = {},
             onMessageShown = {},
         )

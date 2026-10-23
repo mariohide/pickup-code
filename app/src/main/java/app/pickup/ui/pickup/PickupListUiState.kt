@@ -1,5 +1,6 @@
 package app.pickup.ui.pickup
 
+import app.pickup.data.DismissibleBanner
 import app.pickup.model.PickupMethod
 import java.time.LocalDate
 
@@ -20,6 +21,8 @@ sealed interface PickupListUiState {
         val isRefreshing: Boolean = false,
         /** 下拉刷新扫描短信失败，待显示底部提示，显示后清空（spec §9） */
         val scanFailed: Boolean = false,
+        /** 点过「不再提示」的权限横幅（spec message_source §5） */
+        val dismissedBanners: Set<DismissibleBanner> = emptySet(),
     ) : PickupListUiState
 }
 

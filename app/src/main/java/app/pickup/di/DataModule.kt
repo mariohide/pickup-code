@@ -11,7 +11,9 @@ import dagger.hilt.components.SingletonComponent
 import app.pickup.data.MessageScanRepository
 import app.pickup.data.ParcelRepository
 import app.pickup.data.RoomParcelRepository
+import app.pickup.data.SharedPreferencesUserPreferences
 import app.pickup.data.SmsScanRepository
+import app.pickup.data.UserPreferences
 import app.pickup.data.db.ParcelDao
 import app.pickup.data.db.PickupDatabase
 import app.pickup.data.sms.ContentResolverSmsInbox
@@ -28,6 +30,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun messageScanRepository(impl: SmsScanRepository): MessageScanRepository
+
+    @Binds
+    @Singleton
+    abstract fun userPreferences(impl: SharedPreferencesUserPreferences): UserPreferences
 
     @Binds
     abstract fun smsInbox(impl: ContentResolverSmsInbox): SmsInbox

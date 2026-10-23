@@ -1,8 +1,10 @@
 package app.pickup.ui.pickup
 
 import android.database.sqlite.SQLiteException
+import app.pickup.data.DismissibleBanner
 import app.pickup.data.FakeMessageScanRepository
 import app.pickup.data.FakeParcelRepository
+import app.pickup.data.FakeUserPreferences
 import app.pickup.model.Parcel
 import app.pickup.model.ParcelStatus
 import app.pickup.model.PickupMethod
@@ -36,6 +38,7 @@ class PickupListViewModelTest {
     private val clock = Clock.fixed(Instant.parse("2026-10-22T08:00:00Z"), ZoneOffset.UTC)
     private val parcels = FakeParcelRepository()
     private val scanner = FakeMessageScanRepository(parcels)
+    private val preferences = FakeUserPreferences()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -246,7 +249,33 @@ class PickupListViewModelTest {
         assertEquals(listOf(1L), content.picked.map { it.id })
     }
 
-    private fun viewModel() = PickupListViewModel(parcels, scanner, clock)
+    @Test
+    fun `点了不再提示的横幅记下，权限开启过后重新算数`() = runTest {
+        val viewModel = viewModel()
+        collect(viewModel)
+
+        viewModel.dismissBanner(DismissibleBanner.NotificationAccess)
+        viewModel.onPermissionsChecked(notificationsGranted = false, notificationAccessGranted = false)
+        assertEquals(setOf(DismissibleBanner.NotificationAccess), (viewModel.uiState.value as PickupListUiState.Content).dismissedBanners)
+
+        // 开启过通知使用权，之后再被关掉时横幅应重新出现
+        viewModel.onPermissionsChecked(notificationsGranted = false, notificationAccessGranted = true)
+        assertTrue((viewModel.uiState.value as PickupListUiState.Content).dismissedBanners.isEmpty())
+    }
+
+    @Test
+    fun `两条可关的横幅各记各的`() = runTest {
+        val viewModel = viewModel()
+        collect(viewModel)
+
+        viewModel.dismissBanner(DismissibleBanner.Notifications)
+        viewModel.dismissBanner(DismissibleBanner.NotificationAccess)
+        viewModel.onPermissionsChecked(notificationsGranted = true, notificationAccessGranted = false)
+
+        assertEquals(setOf(DismissibleBanner.NotificationAccess), (viewModel.uiState.value as PickupListUiState.Content).dismissedBanners)
+    }
+
+    private fun viewModel() = PickupListViewModel(parcels, scanner, preferences, clock)
 
     private fun TestScope.collect(viewModel: PickupListViewModel) {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }

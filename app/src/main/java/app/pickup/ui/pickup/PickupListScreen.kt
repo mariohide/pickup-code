@@ -1,15 +1,5 @@
 package app.pickup.ui.pickup
 
-import android.Manifest
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,15 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowOutward
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.AlertDialog
@@ -79,9 +65,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pickup.R
+import app.pickup.data.DismissibleBanner
 import app.pickup.model.PickupMethod
-import app.pickup.notification.SmsNotificationListener
+import app.pickup.permission.hasSmsPermission
+import app.pickup.ui.permission.OpenSettingsLabel
+import app.pickup.ui.permission.PermissionActionLabel
+import app.pickup.ui.permission.PermissionStatus
+import app.pickup.ui.permission.rememberAppPermissions
 import app.pickup.ui.theme.PickupTheme
+import app.pickup.ui.theme.SCROLLED_BAR_ALPHA
 import java.time.LocalDate
 
 @Composable
@@ -92,34 +84,31 @@ fun PickupListRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var smsPermissionGranted by remember { mutableStateOf(context.hasSmsPermission()) }
-    var notificationAccessGranted by remember { mutableStateOf(context.hasNotificationAccess()) }
-    // 每次启动应用只请求一次；拒绝两次后系统不再弹窗，只能从横幅去系统设置（spec message_source §5）
-    var permissionsRequested by rememberSaveable { mutableStateOf(false) }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        smsPermissionGranted = context.hasSmsPermission()
-        if (smsPermissionGranted) viewModel.scan()
+    // 启动时不再自动弹系统权限窗：申请改在首次引导里由用户点按钮发起，之后缺的权限只靠横幅提醒（spec onboarding §4）
+    val permissions = rememberAppPermissions()
+    val notificationsGranted = permissions.notifications == PermissionStatus.Granted
+    LaunchedEffect(notificationsGranted, permissions.notificationAccess) {
+        viewModel.onPermissionsChecked(notificationsGranted, permissions.notificationAccess)
     }
-    // 进入本页、回到前台（含从系统设置开启权限回来）时重新检查权限并静默扫描（spec §8）
+    // 进入本页、回到前台（含从系统设置开启权限回来）时静默扫描（spec §8）
     LifecycleStartEffect(viewModel) {
-        smsPermissionGranted = context.hasSmsPermission()
-        notificationAccessGranted = context.hasNotificationAccess()
         // 新包裹通知里的包裹清单上都有（spec message_source §6）
         NotificationManagerCompat.from(context).cancelAll()
-        if (smsPermissionGranted) viewModel.scan()
-        val missing = context.missingRuntimePermissions()
-        if (missing.isNotEmpty() && !permissionsRequested) {
-            permissionsRequested = true
-            permissionLauncher.launch(missing.toTypedArray())
-        }
+        if (context.hasSmsPermission()) viewModel.scan()
         onStopOrDispose {}
     }
     PickupListScreen(
         uiState = uiState,
-        smsPermissionGranted = smsPermissionGranted,
-        onEnableSmsPermission = { context.openAppSettings() },
-        notificationAccessGranted = notificationAccessGranted,
-        onEnableNotificationAccess = { context.openNotificationAccessSettings() },
+        permissionBanner = permissionBanner(
+            smsGranted = permissions.sms == PermissionStatus.Granted,
+            notifications = permissions.notifications,
+            notificationAccessGranted = permissions.notificationAccess,
+            dismissed = (uiState as? PickupListUiState.Content)?.dismissedBanners.orEmpty(),
+        ),
+        onEnableSmsPermission = permissions::openAppDetailsSettings,
+        onEnableNotifications = permissions::enableNotifications,
+        onEnableNotificationAccess = permissions::openNotificationAccessSettings,
+        onDismissBanner = viewModel::dismissBanner,
         onScanFailedShown = viewModel::onScanFailedShown,
         onPickUp = viewModel::pickUp,
         onPickUpAll = viewModel::pickUpAll,
@@ -134,44 +123,44 @@ fun PickupListRoute(
     )
 }
 
-private fun Context.hasSmsPermission(): Boolean =
-    checkSelfPermission(Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+/** 清单顶部的权限横幅，同时只显示一条 */
+sealed interface PermissionBannerState {
+    /** 短信权限：常驻、不能关，error 色系 */
+    data object Sms : PermissionBannerState
 
-/** 读短信、收新短信、发通知；收短信与读短信同组，读短信已授权时系统直接给，不弹窗 */
-private fun Context.missingRuntimePermissions(): List<String> =
-    buildList {
-        add(Manifest.permission.READ_SMS)
-        add(Manifest.permission.RECEIVE_SMS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-    }.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+    /** 发通知：可关；按钮按系统是否还弹窗写「开启」或「去设置」 */
+    data class Notifications(val status: PermissionStatus) : PermissionBannerState
 
-private fun Context.hasNotificationAccess(): Boolean =
-    packageName in NotificationManagerCompat.getEnabledListenerPackages(this)
-
-private fun Context.openAppSettings() {
-    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+    /** 通知使用权：可关，按钮始终「去设置」 */
+    data object NotificationAccess : PermissionBannerState
 }
 
-/** Android 11 起可直达本应用的开关，否则到通知使用权列表 */
-private fun Context.openNotificationAccessSettings() {
-    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(
-            Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
-            ComponentName(this, SmsNotificationListener::class.java).flattenToString(),
-        )
-    } else {
-        Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-    }
-    startActivity(intent)
+/**
+ * 按轻重只取一条：短信 > 发通知 > 通知使用权。发通知关着时不显示通知使用权横幅：
+ * 本应用不发通知，就谈不上与短信应用重复提醒（spec message_source §5）
+ */
+private fun permissionBanner(
+    smsGranted: Boolean,
+    notifications: PermissionStatus,
+    notificationAccessGranted: Boolean,
+    dismissed: Set<DismissibleBanner>,
+): PermissionBannerState? = when {
+    !smsGranted -> PermissionBannerState.Sms
+    notifications != PermissionStatus.Granted ->
+        PermissionBannerState.Notifications(notifications).takeIf { DismissibleBanner.Notifications !in dismissed }
+    !notificationAccessGranted ->
+        PermissionBannerState.NotificationAccess.takeIf { DismissibleBanner.NotificationAccess !in dismissed }
+    else -> null
 }
 
 @Composable
 fun PickupListScreen(
     uiState: PickupListUiState,
-    smsPermissionGranted: Boolean,
+    permissionBanner: PermissionBannerState?,
     onEnableSmsPermission: () -> Unit,
-    notificationAccessGranted: Boolean,
+    onEnableNotifications: () -> Unit,
     onEnableNotificationAccess: () -> Unit,
+    onDismissBanner: (DismissibleBanner) -> Unit,
     onScanFailedShown: () -> Unit,
     onPickUp: (Long) -> Unit,
     onPickUpAll: (List<Long>) -> Unit,
@@ -242,10 +231,11 @@ fun PickupListScreen(
                 ) {
                     PickupList(
                         content = uiState,
-                        smsPermissionGranted = smsPermissionGranted,
+                        permissionBanner = permissionBanner,
                         onEnableSmsPermission = onEnableSmsPermission,
-                        notificationAccessGranted = notificationAccessGranted,
+                        onEnableNotifications = onEnableNotifications,
                         onEnableNotificationAccess = onEnableNotificationAccess,
+                        onDismissBanner = onDismissBanner,
                         topInset = topInset,
                         bottomInset = padding.calculateBottomPadding(),
                         onPickUp = onPickUp,
@@ -265,10 +255,11 @@ fun PickupListScreen(
 @Composable
 private fun PickupList(
     content: PickupListUiState.Content,
-    smsPermissionGranted: Boolean,
+    permissionBanner: PermissionBannerState?,
     onEnableSmsPermission: () -> Unit,
-    notificationAccessGranted: Boolean,
+    onEnableNotifications: () -> Unit,
     onEnableNotificationAccess: () -> Unit,
+    onDismissBanner: (DismissibleBanner) -> Unit,
     topInset: Dp,
     bottomInset: Dp,
     onPickUp: (Long) -> Unit,
@@ -287,36 +278,52 @@ private fun PickupList(
         // 同组卡片之间是 Expressive 分段列表的窄缝，组与组之间靠组头的上边距拉开
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
-        // 同时只显示一条，短信读取权限更要紧
-        if (!smsPermissionGranted) {
-            item(key = "sms-permission") {
-                PermissionBanner(
-                    text = stringResource(R.string.sms_permission_off),
-                    onEnable = onEnableSmsPermission,
-                    critical = true,
+        // 同时只显示一条（spec message_source §5）
+        when (permissionBanner) {
+            PermissionBannerState.Sms -> item(key = "sms-permission") {
+                SmsPermissionBanner(onEnableSmsPermission, animateListItem().padding(bottom = 8.dp))
+            }
+            is PermissionBannerState.Notifications -> item(key = "notifications") {
+                DismissiblePermissionBanner(
+                    text = stringResource(R.string.notifications_off),
+                    status = permissionBanner.status,
+                    onEnable = onEnableNotifications,
+                    onDismiss = { onDismissBanner(DismissibleBanner.Notifications) },
                     modifier = animateListItem().padding(bottom = 8.dp),
                 )
             }
-        } else if (!notificationAccessGranted) {
-            item(key = "notification-access") {
-                PermissionBanner(
+            PermissionBannerState.NotificationAccess -> item(key = "notification-access") {
+                DismissiblePermissionBanner(
                     text = stringResource(R.string.notification_access_off),
+                    status = PermissionStatus.SettingsOnly,
                     onEnable = onEnableNotificationAccess,
+                    onDismiss = { onDismissBanner(DismissibleBanner.NotificationAccess) },
                     modifier = animateListItem().padding(bottom = 8.dp),
                 )
             }
+            null -> Unit
         }
         item(key = "summary") {
             PendingSummary(content.pendingCount)
         }
         if (content.groups.isEmpty()) {
             item(key = "no-pending") {
-                Text(
-                    text = stringResource(R.string.no_pending_parcels),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // 新用户首次扫描常常一件都没有，第二行说明应用在工作（spec §8）
+                Column(
                     modifier = Modifier.padding(vertical = 24.dp),
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.no_pending_parcels),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.no_pending_parcels_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         content.groups.forEach { group ->
@@ -378,8 +385,6 @@ private fun PullRefreshIndicator(state: PullToRefreshState, isRefreshing: Boolea
     }
 }
 
-/** 顶栏滚动后的底色不透明度：足以保护状态栏图标，又能隐约透出下面滚过的内容 */
-private const val SCROLLED_BAR_ALPHA = 0.85f
 
 /** 列表左右留白，卡片边缘落在这里 */
 private val LIST_HORIZONTAL_PADDING = 16.dp
@@ -414,24 +419,17 @@ private fun LazyItemScope.SegmentedParcelCard(
 }
 
 /**
- * 短信权限或通知使用权关闭时的常驻横幅（spec §9）：随列表滚动，不加图标。
- * [critical] 用于短信权限：关了新包裹一件都进不来，用 error 色系；通知使用权可选，用中性色。
+ * 短信权限关闭时的常驻横幅（spec §9）：随列表滚动，不加图标，不能关。
+ * 关了新包裹一件都进不来，用 error 色系，比可选权限的横幅提醒得更重。
  */
 @Composable
-private fun PermissionBanner(
-    text: String,
-    onEnable: () -> Unit,
-    modifier: Modifier = Modifier,
-    critical: Boolean = false,
-) {
+private fun SmsPermissionBanner(onEnable: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
-    val containerColor = if (critical) colors.errorContainer else colors.surfaceContainer
-    val contentColor = if (critical) colors.onErrorContainer else colors.onSurfaceVariant
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        color = containerColor,
-        contentColor = contentColor,
+        color = colors.errorContainer,
+        contentColor = colors.onErrorContainer,
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -439,7 +437,7 @@ private fun PermissionBanner(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = text,
+                text = stringResource(R.string.sms_permission_off),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -447,11 +445,52 @@ private fun PermissionBanner(
             TextButton(
                 onClick = onEnable,
                 shapes = ButtonDefaults.shapes(),
-                colors = if (critical) ButtonDefaults.textButtonColors(contentColor = contentColor) else ButtonDefaults.textButtonColors(),
+                colors = ButtonDefaults.textButtonColors(contentColor = colors.onErrorContainer),
             ) {
-                Text(stringResource(R.string.open_settings))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Icon(Icons.Rounded.ArrowOutward, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                OpenSettingsLabel()
+            }
+        }
+    }
+}
+
+/**
+ * 发通知、通知使用权关闭时的横幅：中性色，可点「不再提示」关掉；文字里已写明之后去哪里重新开启（spec message_source §5）。
+ * 两个按钮放在文字下方靠右，不与文字并排：横幅文字长，并排会把文字挤成很多行。
+ */
+@Composable
+private fun DismissiblePermissionBanner(
+    text: String,
+    status: PermissionStatus,
+    onEnable: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+            Row(
+                modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TextButton(
+                    onClick = onDismiss,
+                    shapes = ButtonDefaults.shapes(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                ) {
+                    Text(stringResource(R.string.dont_show_again))
+                }
+                TextButton(onClick = onEnable, shapes = ButtonDefaults.shapes()) {
+                    PermissionActionLabel(status)
+                }
             }
         }
     }
@@ -623,10 +662,11 @@ private fun PickupListScreenPreview() {
                 ),
                 picked = listOf(card(4, CardState.Picked, "9999", "5-1-3021", inPickedArea = true)),
             ),
-            smsPermissionGranted = false,
+            permissionBanner = PermissionBannerState.Notifications(PermissionStatus.Requestable),
             onEnableSmsPermission = {},
-            notificationAccessGranted = true,
+            onEnableNotifications = {},
             onEnableNotificationAccess = {},
+            onDismissBanner = {},
             onScanFailedShown = {},
             onPickUp = {},
             onPickUpAll = {},

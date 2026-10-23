@@ -1,11 +1,8 @@
 package app.pickup.notification
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
-import android.content.pm.PackageManager
 import android.database.SQLException
-import android.os.Build
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -13,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import app.pickup.R
 import app.pickup.data.ParcelRepository
 import app.pickup.model.Parcel
+import app.pickup.permission.canPostNotifications
 import javax.inject.Inject
 
 /**
@@ -66,10 +64,7 @@ class PickupNotifier @Inject constructor(
     fun cancelAll() = manager.cancelAll()
 
     /** 通知权限与系统里本应用的通知开关都开着 */
-    fun canNotify(): Boolean =
-        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
-            manager.areNotificationsEnabled()
+    fun canNotify(): Boolean = context.canPostNotifications()
 
     private companion object {
         const val CHANNEL_NEW_PARCEL = "new_parcel"

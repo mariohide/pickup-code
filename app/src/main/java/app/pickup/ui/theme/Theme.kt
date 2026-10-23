@@ -26,3 +26,9 @@ fun PickupTheme(content: @Composable () -> Unit) {
     }
     MaterialExpressiveTheme(colorScheme = colorScheme, content = content)
 }
+
+/**
+ * 内容滚到顶栏、状态栏下方时，其底色 surfaceContainer 的不透明度：
+ * 足以保护状态栏图标，又能隐约透出下面滚过的内容。取件清单与首次引导共用。
+ */
+internal const val SCROLLED_BAR_ALPHA = 0.85f

@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import app.pickup.data.MessageScanRepository
+import app.pickup.data.DismissibleBanner
 import app.pickup.data.ParcelRepository
+import app.pickup.data.UserPreferences
 import app.pickup.model.Parcel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -38,6 +40,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class PickupListViewModel @Inject constructor(
     private val parcelRepository: ParcelRepository,
     private val messageScanRepository: MessageScanRepository,
+    private val userPreferences: UserPreferences,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -61,12 +64,21 @@ class PickupListViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<PickupListUiState> =
-        combine(parcels, areas, failures, refreshState) { result, areas, failures, refresh ->
+        combine(
+            parcels,
+            areas,
+            failures,
+            refreshState,
+            userPreferences.dismissedBanners,
+        ) { result, areas, failures, refresh, dismissedBanners ->
             when {
                 result is LoadResult.Failed -> PickupListUiState.LoadFailed
                 result !is LoadResult.Success -> PickupListUiState.Loading
-                else -> buildPickupListContent(result.parcels, areas, failures, clock.zone)
-                    .copy(isRefreshing = refresh.isRefreshing, scanFailed = refresh.scanFailed)
+                else -> buildPickupListContent(result.parcels, areas, failures, clock.zone).copy(
+                    isRefreshing = refresh.isRefreshing,
+                    scanFailed = refresh.scanFailed,
+                    dismissedBanners = dismissedBanners,
+                )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PickupListUiState.Loading)
 
@@ -130,6 +142,18 @@ class PickupListViewModel @Inject constructor(
 
     /** 「扫描短信失败」提示已显示 */
     fun onScanFailedShown() = refreshState.update { it.copy(scanFailed = false) }
+
+    /** 权限横幅点了「不再提示」：记在本机，之后不再出现（spec message_source §5） */
+    fun dismissBanner(banner: DismissibleBanner) = userPreferences.dismissBanner(banner)
+
+    /**
+     * 每次检查权限后调用：开启着的权限，之前的「不再提示」不再算数，
+     * 之后再被关掉是新情况，横幅重新出现（spec message_source §5）
+     */
+    fun onPermissionsChecked(notificationsGranted: Boolean, notificationAccessGranted: Boolean) {
+        if (notificationsGranted) userPreferences.restoreBanner(DismissibleBanner.Notifications)
+        if (notificationAccessGranted) userPreferences.restoreBanner(DismissibleBanner.NotificationAccess)
+    }
 
     /**
      * 离开本页去其他页面（spec §7）：回来时应按最新状态重新归类。导航时本 ViewModel 不销毁，
