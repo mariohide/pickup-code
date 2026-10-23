@@ -13,6 +13,7 @@
 - 测试机：Pixel 2 XL（LineageOS，API 35）。
 - release 包：R8 混淆不需要额外保留规则。NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`，类名在同一个包内一致；真机已验证设置页在进程被杀后能恢复（2026-10-22）。签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
 - 发版：GitHub Actions（`.github/workflows/release.yml`）只在打 tag 或手动触发时运行，先跑单测；打 tag 发正式版，手动触发把所选分支构建为预发布的 latest。推送到 main 不触发（2026-10-23 定）。
+  - **用户说「发版」时**：打 tag 并推送（2026-10-23 定）。tag 为 `v` + `versionName`（如 `v0.1.0`）；这个 tag 已存在时，先把 `app/build.gradle.kts` 的 `versionName` 末位加一、`versionCode` 加一并提交，再打新 tag。推送 main 与 tag 后看 CI 结果。
 - 版本管理：git，主分支 `main`，暂无远端（2026-10-22 初始化）。
 
 ## 架构
