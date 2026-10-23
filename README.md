@@ -7,10 +7,10 @@
 <p>
   <img src="docs/screenshots/list.png" width="260" alt="待取清单：按取件地点分组，取件码先遮住">
   <img src="docs/screenshots/reveal.png" width="260" alt="查看取件码：显示取件码并记为已取，可就地撤销">
-  <img src="docs/screenshots/picked.png" width="260" alt="已取区：最近取走的包裹，可改回待取">
+  <img src="docs/screenshots/picked.png" width="260" alt="已取区：刚取走的排最上，可改回待取">
 </p>
 
-从左到右：按地点分组的待取清单，取件码先遮住；到了驿站点「查看取件码」，看码即记为已取，可就地撤销；已取区列出最近取走的包裹。截图里是演示数据。
+从左到右：按地点分组的待取清单，取件码先遮住；到了驿站点「查看取件码」，看码即记为已取，可就地撤销；已取区里刚取走的排最上，方便反悔。截图里是演示数据。
 
 ## 特性
 
