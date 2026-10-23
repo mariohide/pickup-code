@@ -23,12 +23,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowOutward
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.AlertDialog
@@ -428,8 +431,11 @@ private fun PermissionBanner(text: String, onEnable: () -> Unit, modifier: Modif
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
+            // 跳到系统设置，按全应用口径写「去设置」并带外跳图标（AGENTS.md 按钮口径）
             TextButton(onClick = onEnable, shapes = ButtonDefaults.shapes()) {
-                Text(stringResource(R.string.enable_permission))
+                Text(stringResource(R.string.open_settings))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Icon(Icons.Rounded.ArrowOutward, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
             }
         }
     }
