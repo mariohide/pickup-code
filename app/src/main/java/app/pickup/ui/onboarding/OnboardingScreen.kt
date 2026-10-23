@@ -1,10 +1,6 @@
 package app.pickup.ui.onboarding
 
 import androidx.compose.animation.AnimatedVisibility
-import app.pickup.ui.theme.SCROLLED_BAR_ALPHA
-import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.background
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -23,7 +19,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -70,6 +68,7 @@ import app.pickup.ui.permission.PermissionActionLabel
 import app.pickup.ui.permission.PermissionStatus
 import app.pickup.ui.permission.rememberAppPermissions
 import app.pickup.ui.theme.PickupTheme
+import app.pickup.ui.component.StatusBarScrim
 
 /**
  * 首次引导（spec onboarding.md）。[fromSettings] 时是设置页「使用说明与权限」打开的同一页面：
@@ -144,7 +143,7 @@ fun OnboardingScreen(
     ) { padding ->
         // 内容超出一屏时整页滚动，底部按钮固定（spec §2）。
         // 页面铺满整屏、在状态栏与底部按钮区后面滚动，Scaffold 的内边距放在滚动区里面作为内容边距；
-        // 状态栏底色叠在内容上层
+        // 状态栏遮罩叠在内容上层
         Box(Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -201,7 +200,7 @@ fun OnboardingScreen(
                     )
                 }
             }
-            StatusBarScrim(scrolled = scrollState.value > 0)
+            StatusBarScrim(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         }
     }
 }
@@ -346,27 +345,9 @@ private fun Modifier.bleedHorizontally(bleed: Dp): Modifier = layout { measurabl
 }
 
 /**
- * 状态栏底色同取件清单的顶栏：内容滚到状态栏下方时转为半透明 surfaceContainer，
- * 既保护状态栏图标，又能隐约看到下面的内容；在顶部时透明
- */
-@Composable
-private fun StatusBarScrim(scrolled: Boolean, modifier: Modifier = Modifier) {
-    val scrolledColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = SCROLLED_BAR_ALPHA)
-    val color by animateColorAsState(
-        targetValue = if (scrolled) scrolledColor else scrolledColor.copy(alpha = 0f),
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-    )
-    Box(
-        modifier
-            .fillMaxWidth()
-            .windowInsetsTopHeight(WindowInsets.statusBars)
-            .background(color),
-    )
-}
-
-/**
  * 底部固定的「开始使用」；从设置进入时是「完成」，始终可点。
- * [elevated]：内容正从按钮区后面经过，底色换成半透明 surfaceContainer 抬升，同状态栏；底色铺到导航栏
+ * [elevated]：内容正从按钮区后面经过，按钮区浮在内容上，底色换成不透明的 surfaceContainer 抬升，
+ * 同取件清单浮起的顶栏；底色铺到导航栏
  */
 @Composable
 private fun DoneBar(
@@ -379,7 +360,7 @@ private fun DoneBar(
     val motion = MaterialTheme.motionScheme
     val containerColor by animateColorAsState(
         targetValue = if (elevated) {
-            MaterialTheme.colorScheme.surfaceContainer.copy(alpha = SCROLLED_BAR_ALPHA)
+            MaterialTheme.colorScheme.surfaceContainer
         } else {
             MaterialTheme.colorScheme.surface
         },

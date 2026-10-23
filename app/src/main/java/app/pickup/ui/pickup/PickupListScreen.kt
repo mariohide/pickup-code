@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Visibility
@@ -36,8 +38,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
@@ -68,12 +68,14 @@ import app.pickup.R
 import app.pickup.data.DismissibleBanner
 import app.pickup.model.PickupMethod
 import app.pickup.permission.hasSmsPermission
+import app.pickup.ui.component.ScrollAwayTopAppBar
+import app.pickup.ui.component.rememberScrollAwayTopAppBarState
+import app.pickup.ui.component.scrollAwayTopAppBarHeight
 import app.pickup.ui.permission.OpenSettingsLabel
 import app.pickup.ui.permission.PermissionActionLabel
 import app.pickup.ui.permission.PermissionStatus
 import app.pickup.ui.permission.rememberAppPermissions
 import app.pickup.ui.theme.PickupTheme
-import app.pickup.ui.theme.SCROLLED_BAR_ALPHA
 import java.time.LocalDate
 
 @Composable
@@ -170,10 +172,9 @@ fun PickupListScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 往下滚时顶栏收起、往上滚立刻出现，长列表时把顶部空间让给内容。
-    // 列表在顶栏与状态栏后面滚动；内容滚到其下方时底色转为半透明 surfaceContainer，
-    // 既保护状态栏图标，又能隐约看到下面的内容
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    // 往下滚时顶栏收起、往上滚立刻出现，长列表时把顶部空间让给内容（spec §2）
+    val listState = rememberLazyListState()
+    val topBarState = rememberScrollAwayTopAppBarState(listState)
     val snackbarHostState = remember { SnackbarHostState() }
     val scanFailed = (uiState as? PickupListUiState.Content)?.scanFailed == true
     val scanFailedText = stringResource(R.string.scan_sms_failed)
@@ -187,67 +188,67 @@ fun PickupListScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
+    ) { padding ->
+        // 顶栏不放进 Scaffold，自己叠在内容上层；内容的上边距固定为顶栏完整显示时的高度
+        val topInset = scrollAwayTopAppBarHeight()
+        Box(Modifier.fillMaxSize()) {
+            val contentModifier = Modifier
+                .fillMaxSize()
+                .padding(top = topInset)
+            when (uiState) {
+                PickupListUiState.Loading -> PickupListSkeleton(contentModifier)
+                PickupListUiState.LoadFailed -> LoadFailedContent(onRetryLoad, contentModifier)
+                is PickupListUiState.Content -> {
+                    val pullState = rememberPullToRefreshState()
+                    // 列表不动，指示器从顶栏下沿浮出（下拉只发生在列表顶部，此时顶栏总是展开的）；刷新中停在拉到位的位置转圈
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                        state = pullState,
+                        indicator = {
+                            PullRefreshIndicator(
+                                state = pullState,
+                                isRefreshing = uiState.isRefreshing,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = topInset),
+                            )
+                        },
+                    ) {
+                        // 列表铺满整屏、在顶栏与状态栏后面滚动
+                        PickupList(
+                            content = uiState,
+                            listState = listState,
+                            permissionBanner = permissionBanner,
+                            onEnableSmsPermission = onEnableSmsPermission,
+                            onEnableNotifications = onEnableNotifications,
+                            onEnableNotificationAccess = onEnableNotificationAccess,
+                            onDismissBanner = onDismissBanner,
+                            topInset = topInset,
+                            bottomInset = padding.calculateBottomPadding(),
+                            onPickUp = onPickUp,
+                            onPickUpAll = onPickUpAll,
+                            onUndoPickUp = onUndoPickUp,
+                            // 挂在下拉刷新里层，顶栏只跟随列表自身的滚动
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(topBarState.nestedScrollConnection),
+                        )
+                    }
+                }
+            }
+            ScrollAwayTopAppBar(
                 title = { Text(stringResource(R.string.pickup_list_title)) },
+                state = topBarState,
+                contentShown = uiState is PickupListUiState.Content,
                 actions = {
                     // 设置是目前唯一的操作，直接放图标按钮，不放只有一项的溢出菜单（spec settings §1）
                     IconButton(onClick = onOpenSettings, shapes = IconButtonDefaults.shapes()) {
                         Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = SCROLLED_BAR_ALPHA),
-                ),
-                scrollBehavior = scrollBehavior,
             )
-        },
-    ) { padding ->
-        val contentModifier = Modifier
-            .fillMaxSize()
-            .padding(top = padding.calculateTopPadding())
-        when (uiState) {
-            PickupListUiState.Loading -> PickupListSkeleton(contentModifier)
-            PickupListUiState.LoadFailed -> LoadFailedContent(onRetryLoad, contentModifier)
-            is PickupListUiState.Content -> {
-                // 列表铺满整屏、在顶栏后面滚动，Scaffold 的内边距作为列表的 contentPadding
-                val topInset = padding.calculateTopPadding()
-                val pullState = rememberPullToRefreshState()
-                // 列表不动，指示器从顶栏下沿浮出（下拉只发生在列表顶部，此时顶栏总是展开的）；刷新中停在拉到位的位置转圈
-                PullToRefreshBox(
-                    isRefreshing = uiState.isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize(),
-                    state = pullState,
-                    indicator = {
-                        PullRefreshIndicator(
-                            state = pullState,
-                            isRefreshing = uiState.isRefreshing,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = topInset),
-                        )
-                    },
-                ) {
-                    PickupList(
-                        content = uiState,
-                        permissionBanner = permissionBanner,
-                        onEnableSmsPermission = onEnableSmsPermission,
-                        onEnableNotifications = onEnableNotifications,
-                        onEnableNotificationAccess = onEnableNotificationAccess,
-                        onDismissBanner = onDismissBanner,
-                        topInset = topInset,
-                        bottomInset = padding.calculateBottomPadding(),
-                        onPickUp = onPickUp,
-                        onPickUpAll = onPickUpAll,
-                        onUndoPickUp = onUndoPickUp,
-                        // 顶栏只跟随列表自身的滚动：挂在下拉刷新里层，下拉手势消耗的距离不会让顶栏变色
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    )
-                }
-            }
         }
     }
 }
@@ -255,6 +256,7 @@ fun PickupListScreen(
 @Composable
 private fun PickupList(
     content: PickupListUiState.Content,
+    listState: LazyListState,
     permissionBanner: PermissionBannerState?,
     onEnableSmsPermission: () -> Unit,
     onEnableNotifications: () -> Unit,
@@ -269,6 +271,7 @@ private fun PickupList(
 ) {
     LazyColumn(
         modifier = modifier,
+        state = listState,
         contentPadding = PaddingValues(
             start = LIST_HORIZONTAL_PADDING,
             end = LIST_HORIZONTAL_PADDING,
