@@ -18,6 +18,7 @@
 | `specs/onboarding.md` | 首次引导的规格（原型在 Figma「首次引导」页，链接见规格） |
 | `docs/progress.md` | 开发进度：已实现的规格、界面定稿（含试过又放弃的做法）、待办 |
 | `docs/screenshots/` | README 截图。用演示数据拍：临时给 debug 包加 `.demo` 后缀、在数据库里写入假包裹，装成独立应用，不碰真实数据；拍完卸载并撤销改动 |
+| `baselineprofile/` | 生成 release 包的基线配置文件（Macrobenchmark），结果提交在 `app/src/release/generated/baselineProfiles/`（见「环境与构建」） |
 | `.github/workflows/release.yml` | CI：打 tag 或手动触发时跑单测并发版 |
 | `LICENSE` | GPL-3.0 全文 |
 
@@ -42,7 +43,10 @@
 - release 包：
   - 签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
   - R8 混淆不需要额外保留规则：NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`。
-  - 手动装 release 包要用 `adb install --no-incremental`：默认的增量安装会跳过预编译，应用全程解释执行，动画明显卡顿。装好后启动一次，再 `adb shell cmd package compile -m speed-profile -f app.pickup` 按基线配置文件预编译。
+  - 手动装 release 包要用 `adb install --no-incremental`：默认的增量安装会跳过预编译，应用全程解释执行，动画明显卡顿。装好后让 ProfileInstaller 写入基线配置文件，再按 bg-dexopt 编译（会先合并配置）并启动：
+    `adb shell am broadcast -a androidx.profileinstaller.action.INSTALL_PROFILE app.pickup/androidx.profileinstaller.ProfileInstallReceiver && adb shell am force-stop app.pickup && adb shell cmd package compile -r bg-dexopt -f app.pickup && adb shell am start -n app.pickup/.MainActivity`
+    不要用「启动一次再 `compile -m speed-profile`」：它不合并刚写入的配置，Android 15 上实测编出来是 `verify`，等于没预编译。用 `adb shell dumpsys package dexopt | grep -A3 '\[app.pickup\]'` 确认是 `status=speed-profile`（2026-10-23 定）。
+  - 基线配置文件：常用路径上的界面改动较大后重新生成：`ANDROID_SERIAL=<测试机> ./gradlew :app:generateBaselineProfile`，提交 `app/src/release/generated/baselineProfiles/` 下的结果。被测的是带 `.benchmark` 后缀的独立应用（`app/build.gradle.kts` 里按变体设），跑完自动卸载，不碰测试机上真正在用的应用和数据。装了「黑阈」等后台管控工具的手机会杀掉测试进程，换台手机生成。
 
 ## 架构
 
