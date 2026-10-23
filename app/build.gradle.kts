@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+    alias(libs.plugins.baselineprofile)
 }
 
 android {
@@ -80,6 +81,17 @@ android {
     }
 }
 
+// 生成基线配置文件时 baselineprofile 插件建的构建类型：装成独立应用，
+// 测试跑完卸载时不会连带卸掉测试机上真正在用的 app.pickup 和它的数据。
+// 在 buildTypes 里设后缀会被插件按 release 覆盖，所以在变体上设
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType == "nonMinifiedRelease" || variant.buildType == "benchmarkRelease") {
+            variant.applicationId.set("app.pickup.benchmark")
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
@@ -115,6 +127,10 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    // 安装时按基线配置文件预编译；配置文件由 :baselineprofile 生成，提交在 src/release/generated 下
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.compose.ui.tooling)
 

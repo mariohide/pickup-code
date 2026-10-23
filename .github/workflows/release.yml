@@ -75,7 +75,7 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew :app:assembleRelease
 
       - name: Prepare Release Artifacts
         id: prepare

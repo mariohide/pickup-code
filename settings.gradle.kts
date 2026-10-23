@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "pickup-code"
 include(":app")
+include(":baselineprofile")
