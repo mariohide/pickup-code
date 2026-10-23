@@ -12,12 +12,8 @@
 - 导航：Navigation 3 1.2.0 + lifecycle-viewmodel-navigation3；lifecycle 统一 2.11.0；kotlinx-serialization 1.12.0（NavKey 序列化）。
 - 测试机：Pixel 2 XL（LineageOS，API 35）。
 - release 包：R8 混淆不需要额外保留规则。NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`，类名在同一个包内一致；真机已验证设置页在进程被杀后能恢复（2026-10-22）。签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
-- 发版：GitHub Actions（`.github/workflows/release.yml`）只在打 tag 或手动触发时运行，先跑单测；打 tag 发正式版，手动触发把所选分支构建为预发布的 latest。推送到 main 不触发（2026-10-23 定）。
-  - **用户说「发版」时**：打 tag 并推送（2026-10-23 定）。tag 为 `v` + `versionName`。
-    - 版本号按语义化版本（SemVer），看自上个版本 tag 以来的提交：有不兼容改动（如数据库无法迁移、数据格式不兼容）升主版本；有新功能（`feat`）升次版本；只有修复、性能等（`fix`、`perf`）升修订号。1.0 之前，不兼容改动也只升次版本。只有文档、CI、测试改动时，先问是否还要发版。
-    - 每次发版 `versionCode` 加一。改 `app/build.gradle.kts` 的版本号并提交后再打 tag；还没有版本 tag 时，首个版本直接用当前的 `versionName` 与 `versionCode`，不改。
-    - 推送 main 与 tag 后看 CI 结果。
-- 版本管理：git，主分支 `main`，暂无远端（2026-10-22 初始化）。
+- 发版：GitHub Actions（`.github/workflows/release.yml`）只在打 tag 或手动触发时运行，先跑单测；打 tag 发正式版，手动触发把所选分支构建为预发布的 latest。推送到 main 不触发（2026-10-23 定）。发版的操作约定见 `AGENTS.md`。
+- 版本管理：git，主分支 `main`，远端 GitHub `mariohide/pickup-code`（公开，GPL-3.0）。
 
 ## 架构
 
