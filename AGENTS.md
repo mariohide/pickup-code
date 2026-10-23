@@ -37,6 +37,7 @@
 - 常用命令：
   - 单测：`./gradlew :app:testDebugUnitTest`
   - 装到测试机并启动：`./gradlew :app:installDebug && adb shell am force-stop app.pickup && adb shell am start -n app.pickup/.MainActivity`
+  - 测试机上装的若是正式签名的版本（如从 GitHub Release 下载），`installDebug` 会因签名不符失败。不要卸载，卸载会清掉数据；改为本地用正式密钥打 release 包覆盖安装（见下）。
 - release 包：
   - 签名读 `keystore.properties` 或 CI 环境变量，本地没配时退回 debug 签名。
   - R8 混淆不需要额外保留规则：NavKey 序列化靠类名反射，kotlinx-serialization 自带的规则已保留 `INSTANCE` 与 `serializer()`。
@@ -58,8 +59,9 @@
   - 重复的卡片内控件用 tonal、text 按钮和低对比色。
   - 不加纯装饰的图标、分隔线、自明的标签。
   - Emphasized 字体只留给全屏唯一的重点（如待取件数）。
+- 按钮口径（全应用一致，2026-10-23 定）：按点了之后会不会离开本应用来定。在本应用里完成的（含弹系统权限窗）写「开启」等动词；跳到系统设置等本应用以外页面的写「去设置」，后面带外跳图标 `Icons.Rounded.ArrowOutward`，句中链接同样带这个图标。不写「去开启」：「去」暗示跳转。
 - 配色：页面背景用 `surface`；取件卡片容器用 `surfaceContainerLow`，已取区靠整体透明度弱化，不换容器色；设置页分段列表项容器用 `surfaceContainer`（`SegmentedListItem` 默认是 `surface`，要显式指定）。不靠改页面底色制造对比。
-- 界面以真机为准。Figma 原型（https://www.figma.com/design/o202auUlAwNL6V1wD8H2mQ ）只剩「图标」页有用：启动图标与通知图标的设计稿；界面原型停在第一版，不要当设计依据，也不要去同步。
+- 界面以真机为准。Figma 文件（https://www.figma.com/design/o202auUlAwNL6V1wD8H2mQ ）里：「图标」页是启动图标与通知图标的设计稿；「首次引导」页是该功能实现前的原型（2026-10-23），实现后以真机为准。已实现的界面不在 Figma 里维护，不要去同步。
 
 ## 发版
 

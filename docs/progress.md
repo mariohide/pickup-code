@@ -38,6 +38,7 @@
 
 ## 待决 / 待办
 
+- [ ] 实现首次引导（`specs/onboarding.md`，2026-10-23 定稿）：含设置页回看入口、启动时不再自动弹系统权限窗；以及清单空状态的第二行（pickup_list §8）。
 - [x] 清单卡片容器统一为 `surfaceContainerLow`（符合页面 `surface`、卡片 `surfaceContainerLow` 配色约定）；已取区通过整体透明度弱化（alpha = 0.72f）降低对比度（2026-10-22 定）。
 - [ ] 分组排序在主线程；数据量到上千件时再加 `flowOn(Dispatchers.Default)`。
 - 短信解析：真机核对暂无问题；以后遇到识别错的短信，再把样例补进 `PickupSmsParserTest`。
