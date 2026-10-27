@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
 import app.pickup.data.UserPreferences
+import app.pickup.notification.SmsNotificationListener
 import app.pickup.ui.PickupApp
 import app.pickup.ui.theme.PickupTheme
 import javax.inject.Inject
@@ -25,5 +26,11 @@ class MainActivity : ComponentActivity() {
                 PickupApp(onboardingCompleted = onboardingCompleted)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // 回到前台时检查通知使用权的服务是否还绑定着，没绑定就趁早重新绑定（spec message_source §6）
+        SmsNotificationListener.ensureBound(this)
     }
 }

@@ -26,6 +26,8 @@ class SmsReceivedReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+        // 监听器没绑定时短信应用的通知撤不掉；现在重新绑定，连上后会补撤这条（§6）
+        SmsNotificationListener.ensureBound(context)
         // 长短信分段送达，拼回一条
         val body = Telephony.Sms.Intents.getMessagesFromIntent(intent).joinToString("") { it.messageBody.orEmpty() }
         if (body.isBlank()) return
