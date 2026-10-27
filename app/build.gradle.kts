@@ -21,8 +21,8 @@ android {
         applicationId = "app.pickup"
         minSdk = 29
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.3.2"
     }
 
     val keystorePropsFile = rootProject.file("keystore.properties")
