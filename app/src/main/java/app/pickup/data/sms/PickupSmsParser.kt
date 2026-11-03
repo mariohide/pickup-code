@@ -16,7 +16,7 @@ data class ParsedParcel(
 object PickupSmsParser {
 
     /** 规则有变化时加一：扫描位置按版本记录，新规则会重新回溯扫描（spec message_source.md §1） */
-    const val VERSION = 3
+    const val VERSION = 4
 
     /** 不是取件短信时返回空列表；一条短信有多个取件码时每个码一件 */
     fun parse(body: String, receivedAt: Instant): List<ParsedParcel> {
@@ -65,6 +65,7 @@ object PickupSmsParser {
 
     private fun location(text: String): String? {
         val raw = LOCATION_AFTER_ARRIVAL.find(text)?.groupValues?.get(1)
+            ?: LOCATION_AWAITING.find(text)?.groupValues?.get(1)
             ?: LOCATION_BEFORE_PICKUP.find(text)?.groupValues?.get(1)
             ?: return null
         return normalizeLocation(raw)
@@ -137,6 +138,8 @@ object PickupSmsParser {
         "(?:已到达|已到|已放至|已放入|已放在|已存放至|已存放在|已存放于|已存入|已存至|已投递至|已投递到|已送达|已送至)" +
             "(.+?)$LOCATION_END",
     )
+    /** 「您有4个包裹在沙元埔54栋店待取」；排在「到…取」之前，免得「到站扫码亮灯取件」被当成地点 */
+    private val LOCATION_AWAITING = Regex("在([^，,。；;！!：:]+?)(?:待取|待领取|等待领取)")
     /** 「到阳光小区3号楼取尾号1234包裹」「至华强北路12号丰巢柜取件」 */
     private val LOCATION_BEFORE_PICKUP = Regex("(?:请到|请至|请前往|前往|到|至)([^，,。；;！!：:]+?)(?:领取|取)")
 
