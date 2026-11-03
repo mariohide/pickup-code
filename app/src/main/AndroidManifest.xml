@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 扫码亮灯的包裹要打开淘宝（spec pickup_list.md §4.1）；Android 11 起要声明才查得到 -->
+    <queries>
+        <package android:name="com.taobao.taobao" />
+    </queries>
+
     <!-- 预测性返回：Android 16 起 targetSdk ≥ 36 默认开启，Android 15 要显式声明 -->
     <application
         android:name=".PickupApplication"

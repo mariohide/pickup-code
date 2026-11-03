@@ -16,7 +16,7 @@ data class ParsedParcel(
 object PickupSmsParser {
 
     /** 规则有变化时加一：扫描位置按版本记录，新规则会重新回溯扫描（spec message_source.md §1） */
-    const val VERSION = 4
+    const val VERSION = 5
 
     /** 不是取件短信时返回空列表；一条短信有多个取件码时每个码一件 */
     fun parse(body: String, receivedAt: Instant): List<ParsedParcel> {
@@ -41,7 +41,10 @@ object PickupSmsParser {
             .distinct()
             .toList()
         if (codes.isEmpty()) return null
-        if (!isLocker) return codes.map(PickupMethod::ShelfCode)
+        if (!isLocker) {
+            val scanToLight = SCAN_TO_LIGHT.containsMatchIn(text)
+            return codes.map { PickupMethod.ShelfCode(it, scanToLight) }
+        }
         // 「7号柜23格口」或「1号柜A16」
         val locker = LOCKER_NUMBER.find(text)
         val lockerNumber = locker?.groupValues?.get(1)
@@ -109,6 +112,8 @@ object PickupSmsParser {
             "([A-Za-z0-9-]+(?:\\s*[、,，/]\\s*[A-Za-z0-9-]+)*)",
     )
     private val CODE = Regex("(?<![A-Za-z0-9-])[A-Za-z0-9][A-Za-z0-9-]{2,14}[A-Za-z0-9](?![A-Za-z0-9-])")
+
+    private val SCAN_TO_LIGHT = Regex("扫码亮灯")
 
     private val LOCKER = Regex("丰巢|快递柜|智能柜|自提柜|\\d+号柜|格口")
     private val LOCKER_NUMBER = Regex("(\\d+)号柜([A-Za-z]?\\d+)?")

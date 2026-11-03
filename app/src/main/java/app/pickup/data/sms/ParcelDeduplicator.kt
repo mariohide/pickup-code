@@ -25,6 +25,13 @@ object ParcelDeduplicator {
         return kept
     }
 
+    /** 已有的 [parcel] 没有扫码亮灯标记，而 [incoming] 里同一件包裹有：旧规则漏了，要补上 */
+    fun lacksScanToLight(parcel: ParsedParcel, incoming: List<ParsedParcel>): Boolean {
+        val method = parcel.pickupMethod
+        if (method !is PickupMethod.ShelfCode || method.scanToLight) return false
+        return incoming.any { (it.pickupMethod as? PickupMethod.ShelfCode)?.scanToLight == true && isSameParcel(parcel, it) }
+    }
+
     internal fun isSameParcel(a: ParsedParcel, b: ParsedParcel): Boolean {
         val gap = Duration.between(a.arrivedAt, b.arrivedAt).abs()
         val codeA = a.pickupMethod.code

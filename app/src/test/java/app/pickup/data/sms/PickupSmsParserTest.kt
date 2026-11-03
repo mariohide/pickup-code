@@ -53,7 +53,7 @@ class PickupSmsParserTest {
     fun `地点在待取之前`() {
         val parcel = parse("【菜鸟驿站】您有4个包裹在深圳龙华民治沙元埔54栋店待取，取件码76665等，请尽快到站扫码亮灯取件").single()
 
-        assertEquals(PickupMethod.ShelfCode("76665"), parcel.pickupMethod)
+        assertEquals(PickupMethod.ShelfCode("76665", scanToLight = true), parcel.pickupMethod)
         assertEquals("深圳龙华民治沙元埔54栋店", parcel.location)
     }
 

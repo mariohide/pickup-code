@@ -1,5 +1,8 @@
 package app.pickup.ui.pickup
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -47,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -76,6 +80,7 @@ import app.pickup.ui.permission.PermissionActionLabel
 import app.pickup.ui.permission.PermissionStatus
 import app.pickup.ui.permission.rememberAppPermissions
 import app.pickup.ui.theme.PickupTheme
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
@@ -184,6 +189,16 @@ fun PickupListScreen(
             onScanFailedShown()
         }
     }
+    // 扫码亮灯：与查看取件码一样记为已取并揭码，再打开淘宝（spec §4.1）
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val taobaoMissingText = stringResource(R.string.taobao_not_installed)
+    val onOpenTaobao: (Long) -> Unit = { id ->
+        onPickUp(id)
+        if (!context.openTaobaoPickup()) {
+            scope.launch { snackbarHostState.showSnackbar(taobaoMissingText) }
+        }
+    }
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -228,6 +243,7 @@ fun PickupListScreen(
                             topInset = topInset,
                             bottomInset = padding.calculateBottomPadding(),
                             onPickUp = onPickUp,
+                            onOpenTaobao = onOpenTaobao,
                             onPickUpAll = onPickUpAll,
                             onUndoPickUp = onUndoPickUp,
                             // 挂在下拉刷新里层，顶栏只跟随列表自身的滚动
@@ -265,6 +281,7 @@ private fun PickupList(
     topInset: Dp,
     bottomInset: Dp,
     onPickUp: (Long) -> Unit,
+    onOpenTaobao: (Long) -> Unit,
     onPickUpAll: (List<Long>) -> Unit,
     onUndoPickUp: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -334,7 +351,7 @@ private fun PickupList(
                 LocationGroupHeader(group, onPickUpAll, animateListItem().padding(top = 16.dp, bottom = 6.dp))
             }
             itemsIndexed(group.cards, key = { _, card -> card.id }, contentType = { _, _ -> "card" }) { index, card ->
-                SegmentedParcelCard(card, index, group.cards.size, onPickUp, onUndoPickUp)
+                SegmentedParcelCard(card, index, group.cards.size, onPickUp, onOpenTaobao, onUndoPickUp)
             }
         }
         if (content.picked.isNotEmpty()) {
@@ -342,7 +359,7 @@ private fun PickupList(
                 PickedHeader(content.picked.size, animateListItem().padding(top = 64.dp, bottom = 8.dp))
             }
             itemsIndexed(content.picked, key = { _, card -> card.id }, contentType = { _, _ -> "card" }) { index, card ->
-                SegmentedParcelCard(card, index, content.picked.size, onPickUp, onUndoPickUp)
+                SegmentedParcelCard(card, index, content.picked.size, onPickUp, onOpenTaobao, onUndoPickUp)
             }
         }
     }
@@ -409,11 +426,13 @@ private fun LazyItemScope.SegmentedParcelCard(
     index: Int,
     count: Int,
     onPickUp: (Long) -> Unit,
+    onOpenTaobao: (Long) -> Unit,
     onUndoPickUp: (Long) -> Unit,
 ) {
     ParcelCardItem(
         card = card,
         onPickUp = onPickUp,
+        onOpenTaobao = onOpenTaobao,
         onUndoPickUp = onUndoPickUp,
         modifier = animateListItem(),
         // 同组首尾大圆角、中间小圆角，连成一组
@@ -679,4 +698,28 @@ private fun PickupListScreenPreview() {
             onOpenSettings = {},
         )
     }
+}
+
+private const val TAOBAO_PACKAGE = "com.taobao.taobao"
+
+/**
+ * 淘宝首页图标「菜鸟驿站」打开的取件页，在里面点亮灯（spec §4.1）。
+ * 直接打开链接会跳过启动页的开屏广告；经 tbopen 跳转反而要过启动页（淘宝 10.68 实测，2026-11-03）
+ */
+private const val TAOBAO_PICKUP_URI =
+    "https://pages-fast.m.taobao.com/wow/z/uniapp/1100731/last-mile-fe/m-end-pickup-platform/home" +
+        "?forceThemis=true&skeleton=true&x-ssr=true"
+
+/** 淘宝首页，取件页的链接失效时退回到这里，同样跳过开屏广告 */
+private const val TAOBAO_HOME_URI = "taobao://m.taobao.com/index.htm"
+
+/** 打开淘宝里的取件页；依次退回淘宝首页、从启动页打开，没装淘宝返回 false */
+private fun Context.openTaobaoPickup(): Boolean {
+    val intent = listOf(TAOBAO_PICKUP_URI, TAOBAO_HOME_URI)
+        .map { Intent(Intent.ACTION_VIEW, Uri.parse(it)).setPackage(TAOBAO_PACKAGE) }
+        .firstOrNull { it.resolveActivity(packageManager) != null }
+        ?: packageManager.getLaunchIntentForPackage(TAOBAO_PACKAGE)
+        ?: return false
+    startActivity(intent)
+    return true
 }

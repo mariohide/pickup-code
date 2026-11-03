@@ -71,6 +71,11 @@ class SmsScanRepository @Inject constructor(
         val earliest = parsed.minOfOrNull { it.arrivedAt } ?: return emptyList()
         val parcelDao = database.parcelDao()
         val existing = parcelDao.arrivedSince(earliest.minus(ParcelDeduplicator.LOOKBACK).toEpochMilli())
+        // 同一件包裹不重复入库，但旧规则漏掉的扫码亮灯标记要补上（spec message_source.md §4）
+        existing.filter { ParcelDeduplicator.lacksScanToLight(it.toParsed(), parsed) }
+            .map { it.id }
+            .takeIf { it.isNotEmpty() }
+            ?.let { parcelDao.markScanToLight(it) }
         val fresh = ParcelDeduplicator.newParcels(existing.map { it.toParsed() }, parsed).map { it.toEntity() }
         return fresh.zip(parcelDao.insertAll(fresh)) { parcel, id -> parcel.copy(id = id) }
     }

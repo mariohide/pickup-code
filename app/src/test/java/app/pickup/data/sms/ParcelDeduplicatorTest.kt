@@ -2,6 +2,7 @@ package app.pickup.data.sms
 
 import app.pickup.model.PickupMethod
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -60,12 +61,28 @@ class ParcelDeduplicatorTest {
         assertEquals(1, ParcelDeduplicator.newParcels(listOf(first), listOf(identity(days = 1, carrier = "中通快递"))).size)
     }
 
-    private fun shelf(code: String, days: Long, location: String? = "阳光小区3号楼") = ParsedParcel(
+    @Test
+    fun `同一件包裹新解析出扫码亮灯时给已有的补标记`() {
+        val existing = shelf("76665", days = 0)
+        val rescanned = shelf("76665", days = 0, scanToLight = true)
+
+        assertTrue(ParcelDeduplicator.lacksScanToLight(existing, listOf(rescanned)))
+        assertFalse(ParcelDeduplicator.lacksScanToLight(existing, listOf(shelf("76665", days = 0))))
+        assertFalse(ParcelDeduplicator.lacksScanToLight(existing, listOf(shelf("12345", days = 0, scanToLight = true))))
+        assertFalse(ParcelDeduplicator.lacksScanToLight(rescanned, listOf(rescanned)))
+    }
+
+    private fun shelf(
+        code: String,
+        days: Long,
+        location: String? = "阳光小区3号楼",
+        scanToLight: Boolean = false,
+    ) = ParsedParcel(
         carrier = "申通快递",
         arrivedAt = base.plus(Duration.ofDays(days)),
         location = location,
         phoneTail = "1234",
-        pickupMethod = PickupMethod.ShelfCode(code),
+        pickupMethod = PickupMethod.ShelfCode(code, scanToLight),
     )
 
     private fun identity(days: Long, carrier: String? = null) = ParsedParcel(

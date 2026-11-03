@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowOutward
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -40,6 +45,7 @@ private const val MASKED_DOT_COUNT = 6
 fun ParcelCardItem(
     card: ParcelCard,
     onPickUp: (Long) -> Unit,
+    onOpenTaobao: (Long) -> Unit,
     onUndoPickUp: (Long) -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.largeIncreased,
@@ -69,7 +75,7 @@ fun ParcelCardItem(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 PickupInfo(card, Modifier.weight(1f))
-                CardAction(card, onPickUp, onUndoPickUp)
+                CardAction(card, onPickUp, onOpenTaobao, onUndoPickUp)
             }
             when {
                 card.state == CardState.MarkFailed -> CardError(
@@ -161,17 +167,30 @@ private fun MaskedCode(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CardAction(card: ParcelCard, onPickUp: (Long) -> Unit, onUndoPickUp: (Long) -> Unit) {
+private fun CardAction(
+    card: ParcelCard,
+    onPickUp: (Long) -> Unit,
+    onOpenTaobao: (Long) -> Unit,
+    onUndoPickUp: (Long) -> Unit,
+) {
+    val scanToLight = (card.pickupMethod as? PickupMethod.ShelfCode)?.scanToLight == true
     when (card.state) {
         CardState.Pending -> FilledTonalButton(
-            onClick = { onPickUp(card.id) },
+            onClick = { if (scanToLight) onOpenTaobao(card.id) else onPickUp(card.id) },
             shapes = ButtonDefaults.shapes(),
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             ),
         ) {
-            Text(stringResource(if (card.pickupMethod.hasCode()) R.string.reveal_code else R.string.mark_picked_up))
+            if (scanToLight) {
+                // 离开本应用，带外跳图标（AGENTS.md 按钮口径）
+                Text(stringResource(R.string.open_cainiao_station))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Icon(Icons.Rounded.ArrowOutward, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            } else {
+                Text(stringResource(if (card.pickupMethod.hasCode()) R.string.reveal_code else R.string.mark_picked_up))
+            }
         }
         CardState.Revealed -> TextButton(onClick = { onUndoPickUp(card.id) }, shapes = ButtonDefaults.shapes()) {
             Text(stringResource(R.string.undo_picked_up))
@@ -250,6 +269,7 @@ private fun ParcelCardPreview() {
                         undoFailed = false,
                     ),
                     onPickUp = {},
+                    onOpenTaobao = {},
                     onUndoPickUp = {},
                 )
             }

@@ -22,8 +22,11 @@ sealed interface ParcelStatus {
 }
 
 sealed interface PickupMethod {
-    /** 驿站货架码，如 `3-2-1234` */
-    data class ShelfCode(val code: String) : PickupMethod
+    /**
+     * 驿站货架码，如 `3-2-1234`。
+     * [scanToLight]：短信要求到站扫码亮灯取件，卡片按钮改为「打开菜鸟驿站」（spec pickup_list.md §4）
+     */
+    data class ShelfCode(val code: String, val scanToLight: Boolean = false) : PickupMethod
 
     /** 快递柜取件码；柜号、格口识别不出时为空 */
     data class LockerCode(

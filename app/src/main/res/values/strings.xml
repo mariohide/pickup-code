@@ -20,6 +20,8 @@
     <string name="compartment">%1$s格口</string>
 
     <string name="reveal_code">查看取件码</string>
+    <string name="open_cainiao_station">打开菜鸟驿站</string>
+    <string name="taobao_not_installed">没有找到淘宝 App</string>
     <string name="notification_title_with_location">新包裹已到达%1$s</string>
     <string name="notification_title_no_location">新包裹已到达</string>
     <string name="notification_content">剩%1$d件未取包裹，在%2$d个地点。</string>

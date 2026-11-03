@@ -21,6 +21,8 @@ data class ParcelEntity(
     @ColumnInfo(name = "locker_number") val lockerNumber: String?,
     val compartment: String?,
     @ColumnInfo(name = "pickup_instruction") val pickupInstruction: String?,
+    /** 货架码要到站扫码亮灯取件（spec message_source.md §3） */
+    @ColumnInfo(name = "scan_to_light", defaultValue = "0") val scanToLight: Boolean = false,
     /** 记为已取的时间；为空即待取，状态只由这一列决定 */
     @ColumnInfo(name = "picked_at") val pickedAt: Long?,
 )
@@ -34,7 +36,7 @@ fun ParcelEntity.toDomain(): Parcel = Parcel(
     location = location,
     phoneTail = phoneTail,
     pickupMethod = when (pickupMethod) {
-        StoredPickupMethod.SHELF_CODE -> PickupMethod.ShelfCode(checkNotNull(pickupCode))
+        StoredPickupMethod.SHELF_CODE -> PickupMethod.ShelfCode(checkNotNull(pickupCode), scanToLight)
         StoredPickupMethod.LOCKER_CODE -> PickupMethod.LockerCode(checkNotNull(pickupCode), lockerNumber, compartment)
         StoredPickupMethod.IDENTITY_CODE -> PickupMethod.IdentityCode(checkNotNull(pickupInstruction))
         StoredPickupMethod.OTHER -> PickupMethod.Other(checkNotNull(pickupInstruction))
@@ -68,6 +70,7 @@ fun ParsedParcel.toEntity(): ParcelEntity {
             is PickupMethod.Other -> method.instruction
             else -> null
         },
+        scanToLight = (method as? PickupMethod.ShelfCode)?.scanToLight == true,
         pickedAt = null,
     )
 }

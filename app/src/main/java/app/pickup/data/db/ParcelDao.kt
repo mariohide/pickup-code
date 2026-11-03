@@ -31,6 +31,10 @@ interface ParcelDao {
     @Query("SELECT * FROM parcel WHERE arrived_at >= :since")
     suspend fun arrivedSince(since: Long): List<ParcelEntity>
 
+    /** 给已有的货架码补上扫码亮灯标记（spec message_source.md §4） */
+    @Query("UPDATE parcel SET scan_to_light = 1 WHERE id IN (:ids)")
+    suspend fun markScanToLight(ids: List<Long>)
+
     /** 返回新行的 id，顺序与 [parcels] 一致 */
     @Insert
     suspend fun insertAll(parcels: List<ParcelEntity>): List<Long>
